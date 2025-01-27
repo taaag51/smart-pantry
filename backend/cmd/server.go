@@ -1,43 +1,34 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
-	"smart-pantry/backend/db"
+	"log"
+	"smart-pantry/backend/configs"
 	"smart-pantry/backend/internal/controllers"
+	"smart-pantry/backend/internal/models"
 	"smart-pantry/backend/internal/routes"
 	"smart-pantry/backend/internal/services"
 
-	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 func main() {
-	e := echo.New()
+	configs.LoadEnv()
 
-	// Load .env file
-	godotenv.Load()
+	db, err := gorm.Open(sqlite.Open("smart_pantry.db"), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("failed to connect database: %v", err)
+	}
 
-	// Middleware
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	// AutoMigrate
+	db.AutoMigrate(&models.PantryItem{})
 
-	// Database initialization
-	database := db.InitDB()
-	pantryService := services.NewPantryService(database)
-	authService := services.NewAuthService(database)
-	authController := controllers.NewAuthController(authService)
+	pantryService := services.NewPantryService(db)
 	pantryController := controllers.NewPantryController(pantryService)
 
-	// Routes
-	routes.SetupAPIRoutes(e, authService, authController, pantryService)
+	e := echo.New()
+	routes.SetupAPIRoutes(e, pantryController)
 
-	// Start server
-	port := os.Getenv("SERVER_PORT")
-	if port == "" {
-		port = "8080" // Default port
-	}
-	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", port)))
+	e.Logger.Fatal(e.Start(":8080"))
 }

@@ -14,32 +14,44 @@ func NewPantryService(db *gorm.DB) *PantryService {
 	return &PantryService{db: db}
 }
 
-func (s *PantryService) GetPantryItems() ([]models.PantryItem, error) {
-	// TODO: Implement database interaction to fetch pantry items
-	return []models.PantryItem{}, nil
+type PantryItemParams struct {
+	Name       string  `json:"name"`
+	Quantity   int     `json:"quantity"`
+	ExpiryDate *string `json:"expiry_date"`
 }
 
-func (s *PantryService) AddPantryItem(item models.PantryItem) error {
-	// TODO: Implement database interaction to add pantry item
-	return nil
+func (ps *PantryService) GetPantryItems() ([]models.PantryItem, error) {
+	var items []models.PantryItem
+	result := ps.db.Find(&items)
+	return items, result.Error
 }
 
-func (s *PantryService) DeletePantryItem(id uint) error {
-	// TODO: Implement database interaction to delete pantry item
-	return nil
+func (ps *PantryService) CreatePantryItem(params PantryItemParams) (*models.PantryItem, error) {
+	item := models.PantryItem{
+		Name:       params.Name,
+		Quantity:   params.Quantity,
+		ExpiryDate: *params.ExpiryDate,
+	}
+	result := ps.db.Create(&item)
+	return &item, result.Error
 }
 
-func (s *PantryService) GetPantryItem(id uint) (*models.PantryItem, error) {
-	// TODO: Implement database interaction to get pantry item by ID
-	return nil, nil
+func (ps *PantryService) UpdatePantryItem(id int, params PantryItemParams) (*models.PantryItem, error) {
+	var item models.PantryItem
+	if err := ps.db.First(&item, id).Error; err != nil {
+		return nil, err
+	}
+
+	item.Name = params.Name
+	item.Quantity = params.Quantity
+	item.ExpiryDate = *params.ExpiryDate
+
+	result := ps.db.Save(&item)
+	return &item, result.Error
 }
 
-func (s *PantryService) CreatePantryItem(item *models.PantryItem) (*models.PantryItem, error) {
-	// TODO: Implement database interaction to create pantry item
-	return nil, nil
-}
-
-func (s *PantryService) UpdatePantryItem(id uint, item *models.PantryItem) error {
-	// TODO: Implement database interaction to update pantry item
-	return nil
+func (ps *PantryService) DeletePantryItem(id int) error {
+	var item models.PantryItem
+	result := ps.db.Delete(&item, id)
+	return result.Error
 }

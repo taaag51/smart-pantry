@@ -1,17 +1,22 @@
 import React, { useState, useEffect } from "react";
-import { Container, Typography, Button } from "@mui/material"; // Button をインポート
-import PantryItemList from "../components/PantryItemList";
+import axios from "axios";
 import PantryForm from "../components/PantryForm";
-import {
-  getPantryItems,
-  addPantryItem,
-  PantryItem,
-  getRecipeSuggestion,
-} from "../services/api";
+import PantryItemList from "../components/PantryItemList";
+import { Container, Typography, Snackbar, Alert } from "@mui/material";
+
+interface PantryItem {
+  ID: number;
+  CreatedAt: string;
+  UpdatedAt: string;
+  Name: string;
+  Quantity: number;
+  ExpiryDate: string | null;
+}
 
 const PantryPage: React.FC = () => {
   const [items, setItems] = useState<PantryItem[]>([]);
-  const [recipe, setRecipe] = useState<string>(""); // レシピ提案の状態を追加
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchItems();
@@ -19,52 +24,108 @@ const PantryPage: React.FC = () => {
 
   const fetchItems = async () => {
     try {
-      const data = await getPantryItems();
-      setItems(data);
-    } catch (error) {
-      console.error("Error fetching pantry items:", error);
+      const response = await axios.get("/api/pantry");
+      setItems(response.data);
+    } catch (err: any) {
+      setError("Failed to fetch pantry items.");
     }
   };
 
-  const handleAddItem = async (item) => {
+  const handleCreateItem = async (newItem: {
+    Name: string;
+    Quantity: number;
+    ExpiryDate: string | null;
+  }) => {
     try {
-      await addPantryItem(item);
+      const response = await axios.post("/api/pantry", newItem);
+      setItems([...items, response.data]);
+      setSuccess("Item created successfully.");
+      setError(null);
       fetchItems();
-    } catch (error) {
-      console.error("Error adding pantry item:", error);
+    } catch (err: any) {
+      setError("Failed to create pantry item.");
+      setSuccess(null);
     }
   };
 
-  const handleSuggestRecipe = async () => {
-    // レシピ提案ボタンのクリックハンドラー
+  const handleUpdateItem = async (id: number, updatedItem: PantryItem) => {
     try {
-      const data = await getRecipeSuggestion();
-      setRecipe(data.recipe); // レシピ提案APIの結果をstateに設定
-    } catch (error) {
-      console.error("Error suggesting recipe:", error);
+      await axios.put(`/api/pantry/${id}`, updatedItem);
+      const updatedItems = items.map((item) =>
+        item.ID === id ? updatedItem : item
+      );
+      setItems(updatedItems);
+      setSuccess("Item updated successfully.");
+      setError(null);
+      fetchItems(); // Refresh item list
+    } catch (err: any) {
+      setError("Failed to update pantry item.");
+      setSuccess(null);
     }
+  };
+
+  const handleDeleteItem = async (id: number) => {
+    try {
+      await axios.delete(`/api/pantry/${id}`);
+      const filteredItems = items.filter((item) => item.ID !== id);
+      setItems(filteredItems);
+      setSuccess("Item deleted successfully.");
+      setError(null);
+      fetchItems(); // Refresh item list
+    } catch (err: any) {
+      setError("Failed to delete pantry item.");
+      setSuccess(null);
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setError(null);
+    setSuccess(null);
   };
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Pantry Management
+    <Container maxWidth="md">
+      <Typography variant="h4" component="h1" gutterBottom>
+        Smart Pantry
       </Typography>
-      <PantryForm onSubmit={handleAddItem} />
-      <Button variant="contained" color="primary" onClick={handleSuggestRecipe}>
-        {" "}
-        // レシピ提案ボタンを追加 レシピ提案
-      </Button>
-      {recipe && ( // レシピ提案がある場合のみ表示
-        <Typography variant="body1" mt={2}>
-          レシピ提案: {recipe}
-        </Typography>
-      )}
+
+      <PantryForm onCreateItem={handleCreateItem} />
+
       <PantryItemList
         items={items}
-        onEdit={(item) => console.log("Edit:", item)}
-        onDelete={(id) => console.log("Delete:", id)}
+        onUpdateItem={handleUpdateItem}
+        onDeleteItem={handleDeleteItem}
       />
+
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        severity="error"
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="error"
+          sx={{ width: "100%" }}
+        >
+          {error}
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={!!success}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        severity="success"
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="success"
+          sx={{ width: "100%" }}
+        >
+          {success}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

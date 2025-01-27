@@ -1,63 +1,63 @@
 import React from "react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
+  List,
+  ListItem,
+  ListItemText,
   IconButton,
+  ListItemSecondaryAction,
 } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { PantryItem } from "../services/api";
+import EditIcon from "@mui/icons-material/Edit";
+
+interface PantryItem {
+  ID: number;
+  CreatedAt: string;
+  UpdatedAt: string;
+  Name: string;
+  Quantity: number;
+  ExpiryDate: string | null;
+}
 
 interface PantryItemListProps {
   items: PantryItem[];
-  onEdit: (item: PantryItem) => void;
-  onDelete: (id: number) => void;
+  onDeleteItem: (id: number) => void;
+  onUpdateItem: (id: number, updatedItem: PantryItem) => void;
 }
 
-const PantryItemList: React.FC<PantryItemListProps> = ({ items }) => {
+const PantryItemList: React.FC<PantryItemListProps> = ({
+  items,
+  onDeleteItem,
+  onUpdateItem,
+}) => {
   return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>ID</TableCell>
-            <TableCell>Name</TableCell>
-            <TableCell>Quantity</TableCell>
-            <TableCell>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {items.map((item) => (
-            <TableRow key={item.ID}>
-              <TableCell>{item.ID}</TableCell>
-              <TableCell>{item.Name}</TableCell>
-              <TableCell>{item.Quantity}</TableCell>
-              <TableCell>
-                <IconButton
-                  color="primary"
-                  onClick={() => onEdit(item)}
-                  aria-label="edit"
-                >
-                  <EditIcon />
-                </IconButton>
-                <IconButton
-                  color="error"
-                  onClick={() => onDelete(item.ID)}
-                  aria-label="delete"
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <List>
+      {items.map((item) => (
+        <ListItem key={item.ID}>
+          <ListItemText
+            primary={item.Name}
+            secondary={`Quantity: ${item.Quantity}, Expires: ${
+              item.ExpiryDate || "N/A"
+            }`}
+          />
+          <ListItemSecondaryAction>
+            <IconButton
+              edge="end"
+              aria-label="edit"
+              onClick={() => onUpdateItem(item.ID, item)}
+            >
+              <EditIcon />
+            </IconButton>
+            <IconButton
+              edge="end"
+              aria-label="delete"
+              onClick={() => onDeleteItem(item.ID)}
+            >
+              <DeleteIcon />
+            </IconButton>
+          </ListItemSecondaryAction>
+        </ListItem>
+      ))}
+    </List>
   );
 };
 

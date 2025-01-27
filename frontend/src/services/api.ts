@@ -1,41 +1,28 @@
 import axios from "axios";
 
-export interface PantryItem {
-  ID: number;
-  Name: string;
-  Quantity: number;
-}
-
-const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8080/api",
+const apiClient = axios.create({
+  baseURL: "/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-export const getPantryItems = async (): Promise<PantryItem[]> => {
-  const response = await api.get("/pantry");
+export const getPantryItems = async () => {
+  const response = await apiClient.get("/pantry");
   return response.data;
 };
 
-export const addPantryItem = async (
-  item: Omit<PantryItem, "ID">
-): Promise<PantryItem> => {
-  const response = await api.post("/pantry", item);
+export const createPantryItem = async (item) => {
+  const response = await apiClient.post("/pantry", item);
   return response.data;
 };
 
-export const updatePantryItem = async (
-  id: number,
-  item: Partial<PantryItem>
-): Promise<PantryItem> => {
-  const response = await api.put(`/pantry/${id}`, item);
+export const updatePantryItem = async (id, item) => {
+  const response = await apiClient.put(`/pantry/${id}`, item);
   return response.data;
 };
 
-export const deletePantryItem = async (id: number): Promise<void> => {
-  await api.delete(`/pantry/${id}`);
-};
-
-export const getRecipeSuggestion = async () => {
-  // レシピ提案APIを呼び出す関数を追加
-  const response = await api.get("/pantry/recipe");
+export const deletePantryItem = async (id) => {
+  const response = await apiClient.delete(`/pantry/${id}`);
   return response.data;
 };
