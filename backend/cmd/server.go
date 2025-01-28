@@ -2,33 +2,44 @@ package main
 
 import (
 	"log"
+	"net/http"
+
 	"smart-pantry/backend/configs"
-	"smart-pantry/backend/internal/controllers"
 	"smart-pantry/backend/internal/models"
-	"smart-pantry/backend/internal/routes"
-	"smart-pantry/backend/internal/services"
+
+	"github.com/joho/godotenv"
 
 	"github.com/labstack/echo/v4"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
-	configs.LoadEnv()
-
-	db, err := gorm.Open(sqlite.Open("smart_pantry.db"), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("failed to connect database: %v", err)
+	// Load environment variables from .env file
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
 	}
 
-	// AutoMigrate
-	db.AutoMigrate(&models.PantryItem{})
+	// Initialize the database connection
+	configs.ConnectDatabase()
 
-	pantryService := services.NewPantryService(db)
-	pantryController := controllers.NewPantryController(pantryService)
+	// Perform database migrations
+	if err := configs.DB.AutoMigrate(&models.FoodItem{}); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
 
 	e := echo.New()
-	routes.SetupAPIRoutes(e, pantryController)
 
-	e.Logger.Fatal(e.Start(":8080"))
+	// Middleware
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+
+	// Routes
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Hello, Smart Pantry!")
+	})
+
+	// Start server
+	if err := e.Start(":8080"); err != nil {
+		log.Fatalf("Shutting down the server: %v", err)
+	}
 }

@@ -9,63 +9,74 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// PantryController handles pantry-related API endpoints
 type PantryController struct {
-	service *services.PantryService
+	PantryService services.PantryService
 }
 
-func NewPantryController(service *services.PantryService) *PantryController {
-	return &PantryController{service: service}
+// NewPantryController creates a new PantryController
+func NewPantryController(ps services.PantryService) *PantryController {
+	return &PantryController{
+		PantryService: ps,
+	}
 }
 
+// GetPantryItems retrieves all pantry items
 func (pc *PantryController) GetPantryItems(c echo.Context) error {
-	items, err := pc.service.GetPantryItems()
+	items, err := pc.PantryService.GetPantryItems()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to get pantry items"})
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
 	return c.JSON(http.StatusOK, items)
 }
 
+// CreatePantryItem adds a new pantry item
 func (pc *PantryController) CreatePantryItem(c echo.Context) error {
-	var item services.PantryItemParams
-	if err := c.Bind(&item); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request"})
+	var params services.PantryItemParams
+	if err := c.Bind(&params); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
 
-	createdItem, err := pc.service.CreatePantryItem(item)
+	item, err := pc.PantryService.CreatePantryItem(params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to create pantry item"})
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
-	return c.JSON(http.StatusCreated, createdItem)
+
+	return c.JSON(http.StatusCreated, item)
 }
 
+// UpdatePantryItem updates an existing pantry item
 func (pc *PantryController) UpdatePantryItem(c echo.Context) error {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid item ID"})
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid ID"})
 	}
 
-	var item services.PantryItemParams
-	if err := c.Bind(&item); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request"})
+	var params services.PantryItemParams
+	if err := c.Bind(&params); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
 
-	updatedItem, err := pc.service.UpdatePantryItem(id, item)
+	item, err := pc.PantryService.UpdatePantryItem(id, params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to update pantry item"})
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
-	return c.JSON(http.StatusOK, updatedItem)
+
+	return c.JSON(http.StatusOK, item)
 }
 
+// DeletePantryItem removes a pantry item
 func (pc *PantryController) DeletePantryItem(c echo.Context) error {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid item ID"})
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid ID"})
 	}
 
-	if err := pc.service.DeletePantryItem(id); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to delete pantry item"})
+	if err := pc.PantryService.DeletePantryItem(id); err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
-	return c.NoContent(http.StatusNoContent)
+
+	return c.JSON(http.StatusNoContent, nil)
 }

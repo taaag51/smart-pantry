@@ -101,7 +101,6 @@ const PantryPage: React.FC = () => {
         open={!!error}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        severity="error"
       >
         <Alert
           onClose={handleSnackbarClose}
@@ -116,7 +115,6 @@ const PantryPage: React.FC = () => {
         open={!!success}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        severity="success"
       >
         <Alert
           onClose={handleSnackbarClose}

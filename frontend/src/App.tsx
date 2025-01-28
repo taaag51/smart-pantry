@@ -1,12 +1,13 @@
 import React from "react";
-import PantryPage from "./pages/PantryPage";
+import Layout from "./components/Layout";
 
-function App() {
+const App: React.FC = () => {
   return (
-    <div>
-      <PantryPage />
-    </div>
+    <Layout>
+      <h1>Smart Pantry</h1>
+      <p>Welcome to the Smart Pantry application!</p>
+    </Layout>
   );
-}
+};
 
 export default App;
