@@ -1,120 +1,100 @@
-# Smart-pantry
+# Smart Pantry
 
-Smart-pantry is a web application designed to help users manage their pantry inventory efficiently. Built with a Go backend using the Echo framework and a React frontend, Smart-pantry offers a seamless experience for tracking, adding, and organizing pantry items.
+食材管理とレシピ提案を行う Web アプリケーション
 
-## Table of Contents
+## 機能
 
-- [Features](#features)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-- [Project Structure](#project-structure)
-- [Contributing](#contributing)
-- [License](#license)
+1. 食材管理
 
-## Features
+   - 食材の登録・編集・削除
+   - 数量管理
+   - 賞味期限管理
 
-- **Add Items:** Easily add new items to your pantry with detailed information.
-- **View Inventory:** View a comprehensive list of all pantry items.
-- **Edit & Delete:** Modify or remove items as needed.
-- **Search & Filter:** Quickly find items using search and filter functionalities.
-- **Responsive Design:** Accessible on both desktop and mobile devices.
+2. 賞味期限トラッカー
 
-## Getting Started
+   - 期限切れ間近の食材を自動検出
+   - 視覚的なアラート表示（黄色：期限間近、赤：期限切れ）
 
-### Prerequisites
+3. AI レシピ提案
+   - 期限切れ間近の食材を活用したレシピを自動提案
+   - 栄養バランスを考慮したレシピ生成
+   - 5 分ごとに自動更新
 
-Ensure you have the following installed on your system:
+## 技術スタック
 
-- **Go**: 1.21
-- **Node.js**: 18.x
-- **Docker** (optional, for containerization)
+### バックエンド
 
-### Installation
+- Go
+- Echo Framework
+- GORM
+- Google Gemini API
 
-1. **Clone the Repository:**
+### フロントエンド
 
-   ```bash
-   git clone https://github.com/yourusername/smart-pantry.git
-   cd smart-pantry
-   ```
+- React
+- TypeScript
+- Material-UI
+- React Query
 
-2. **Backend Setup:**
+## セットアップ
 
-   ```bash
-   cd backend
-   go mod download
-   ```
+1. 環境変数の設定
 
-3. **Frontend Setup:**
-
-   ```bash
-   cd ../frontend
-   npm install
-   ```
-
-4. **Environment Variables:**
-
-   - Duplicate the `.env.example` file and rename it to `.env`.
-   - Fill in the necessary environment variables as per your setup.
-
-5. **Run the Application:**
-
-   ```bash
-   cd ../
-   docker-compose up --build
-   ```
-
-6. **Access the Application:**
-   Open your browser and navigate to `http://localhost:8080`.
-
-## Project Structure
-
-```
-smart-pantry/
-├── backend/
-│   ├── cmd/
-│   │   └── server.go
-│   ├── configs/
-│   │   └── config.go
-│   ├── internal/
-│   │   ├── controllers/
-│   │   │   └── pantry_controller.go
-│   │   ├── models/
-│   │   │   └── pantry_model.go
-│   │   ├── routes/
-│   │   │   └── api.go
-│   │   └── services/
-│   │       └── pantry_service.go
-│   ├── migrations/
-│   ├── scripts/
-│   ├── Dockerfile
-│   ├── go.mod
-│   └── go.sum
-├── frontend/
-│   ├── package.json
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── PantryForm.tsx
-│   │   │   └── PantryItemList.tsx
-│   │   ├── pages/
-│   │   │   └── PantryPage.tsx
-│   │   ├── services/
-│   │   │   └── api.ts
-│   │   ├── styles/
-│   │   ├── utils/
-│   │   ├── App.tsx
-│   │   └── index.tsx
-├── docker-compose.yml
-├── .env.example
-├── .gitignore
-└── README.md
+```bash
+cp .env.example .env
 ```
 
-## Contributing
+必要な環境変数：
 
-Contributions are welcome! Please fork the repository and submit a pull request for any enhancements or bug fixes.
+- `GEMINI_API_KEY`: Google Gemini API のキー
+- `SECRET`: JWT シークレットキー
+- `API_DOMAIN`: API ドメイン
 
-## License
+2. バックエンドの起動
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+```bash
+cd go-rest-api
+go mod download
+go run migrate/migrate.go
+go run main.go
+```
+
+3. フロントエンドの起動
+
+```bash
+cd react-todo
+npm install
+npm start
+```
+
+## テスト実行
+
+```bash
+# バックエンドのテスト
+cd go-rest-api
+go test ./...
+
+# フロントエンドのテスト
+cd react-todo
+npm test
+```
+
+## API エンドポイント
+
+### 食材管理
+
+- GET `/food-items`: 食材一覧の取得
+- GET `/food-items/:id`: 特定の食材の取得
+- POST `/food-items`: 新規食材の登録
+- PUT `/food-items/:id`: 食材情報の更新
+- DELETE `/food-items/:id`: 食材の削除
+
+### レシピ提案
+
+- GET `/recipes/suggestions`: AI によるレシピ提案の取得
+
+## 注意事項
+
+- 賞味期限が 7 日以内の食材に対してアラートが表示されます
+- レシピ提案は期限切れ間近の食材を優先的に使用します
+- API リクエストには JWT 認証が必要です
