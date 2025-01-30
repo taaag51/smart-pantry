@@ -15,6 +15,29 @@ type MockFoodItemRepository struct {
 
 func (m *MockFoodItemRepository) GetAllFoodItems(foodItems *[]model.FoodItem) error {
 	args := m.Called(foodItems)
+	if items, ok := args.Get(0).([]model.FoodItem); ok {
+		*foodItems = items
+	}
+	return args.Error(1)
+}
+
+func (m *MockFoodItemRepository) GetFoodItemById(foodItem *model.FoodItem, id uint) error {
+	args := m.Called(foodItem, id)
+	return args.Error(0)
+}
+
+func (m *MockFoodItemRepository) CreateFoodItem(foodItem *model.FoodItem) error {
+	args := m.Called(foodItem)
+	return args.Error(0)
+}
+
+func (m *MockFoodItemRepository) UpdateFoodItem(foodItem *model.FoodItem) error {
+	args := m.Called(foodItem)
+	return args.Error(0)
+}
+
+func (m *MockFoodItemRepository) DeleteFoodItem(id uint) error {
+	args := m.Called(id)
 	return args.Error(0)
 }
 
@@ -28,11 +51,11 @@ func (m *MockGeminiService) GenerateRecipe(foodItems []model.FoodItem) (string, 
 }
 
 func TestGetRecipeSuggestions(t *testing.T) {
-	mockRepo := new(MockFoodItemRepository)
-	mockGemini := new(MockGeminiService)
-	usecase := NewRecipeUsecase(mockRepo, mockGemini)
-
 	t.Run("期限切れ間近の食材がある場合", func(t *testing.T) {
+		mockRepo := new(MockFoodItemRepository)
+		mockGemini := new(MockGeminiService)
+		usecase := NewRecipeUsecase(mockRepo, mockGemini)
+
 		// テストデータ
 		foodItems := []model.FoodItem{
 			{
@@ -50,7 +73,7 @@ func TestGetRecipeSuggestions(t *testing.T) {
 				arg := args.Get(0).(*[]model.FoodItem)
 				*arg = foodItems
 			}).
-			Return(nil)
+			Return(foodItems, nil)
 
 		mockGemini.On("GenerateRecipe", foodItems).
 			Return(expectedRecipe, nil)
@@ -66,16 +89,37 @@ func TestGetRecipeSuggestions(t *testing.T) {
 	})
 
 	t.Run("食材が存在しない場合", func(t *testing.T) {
-		// テストデータ
-		var emptyFoodItems []model.FoodItem
+		mockRepo := new(MockFoodItemRepository)
+		mockGemini := new(MockGeminiService)
+		usecase := NewRecipeUsecase(mockRepo, mockGemini)
 
 		// モックの設定
+		var emptyFoodItems []model.FoodItem
 		mockRepo.On("GetAllFoodItems", mock.AnythingOfType("*[]model.FoodItem")).
 			Run(func(args mock.Arguments) {
 				arg := args.Get(0).(*[]model.FoodItem)
 				*arg = emptyFoodItems
 			}).
-			Return(nil)
+			Return(emptyFoodItems, nil)
+
+		// テスト実行
+		recipe, err := usecase.GetRecipeSuggestions(1)
+
+		// アサーション
+		assert.Error(t, err)
+		assert.Empty(t, recipe)
+		assert.Contains(t, err.Error(), "食材が登録されていません")
+		mockRepo.AssertExpectations(t)
+	})
+
+	t.Run("リポジトリでエラーが発生した場合", func(t *testing.T) {
+		mockRepo := new(MockFoodItemRepository)
+		mockGemini := new(MockGeminiService)
+		usecase := NewRecipeUsecase(mockRepo, mockGemini)
+
+		// モックの設定
+		mockRepo.On("GetAllFoodItems", mock.AnythingOfType("*[]model.FoodItem")).
+			Return([]model.FoodItem{}, assert.AnError)
 
 		// テスト実行
 		recipe, err := usecase.GetRecipeSuggestions(1)

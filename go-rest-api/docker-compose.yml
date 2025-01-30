@@ -1,14 +1,24 @@
+version: "3.8"
 services:
-  dev-postgres:
-    image: postgres:15.1-alpine
-    ports:
-      - "5434:5432"
+  db:
+    image: postgres:15-alpine
+    container_name: smart_pantry_db
     environment:
-      POSTGRES_USER: udemy
-      POSTGRES_PASSWORD: udemy
-      POSTGRES_DB: udemy
-    restart: always
-    networks:
-      - lesson
-networks:
-  lesson:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PW:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-smart_pantry}
+      TZ: "Asia/Tokyo"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local

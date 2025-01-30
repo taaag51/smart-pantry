@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/golang-jwt/jwt/v5"
+	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -33,7 +35,10 @@ func NewRouter(tc controller.ITaskController, uc controller.IUserController, fc 
 
 	// JWT認証が必要なルート
 	api := e.Group("")
-	api.Use(middleware.JWTWithConfig(middleware.JWTConfig{
+	api.Use(echojwt.WithConfig(echojwt.Config{
+		NewClaimsFunc: func(c echo.Context) jwt.Claims {
+			return new(jwt.MapClaims)
+		},
 		SigningKey:  []byte(os.Getenv("SECRET")),
 		TokenLookup: "cookie:token",
 	}))
