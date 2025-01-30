@@ -11,16 +11,20 @@ import (
 )
 
 func NewDB() *gorm.DB {
-	if os.Getenv("GO_ENV") == "dev" {
-		err := godotenv.Load()
-		if err != nil {
-			log.Fatalln(err)
-		}
+	// 常に.envファイルを読み込む
+	err := godotenv.Load("../.env")
+	if err != nil {
+		log.Printf("Warning: .env file not found: %v", err)
 	}
-	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", os.Getenv("POSTGRES_USER"),
-		os.Getenv("POSTGRES_PW"), os.Getenv("POSTGRES_HOST"),
-		os.Getenv("POSTGRES_PORT"), os.Getenv("POSTGRES_DB"))
-	db, err := gorm.Open(postgres.Open(url), &gorm.Config{})
+
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Tokyo",
+		os.Getenv("POSTGRES_HOST"),
+		os.Getenv("POSTGRES_USER"),
+		os.Getenv("POSTGRES_PW"),
+		os.Getenv("POSTGRES_DB"),
+		os.Getenv("POSTGRES_PORT"))
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalln(err)
 	}
