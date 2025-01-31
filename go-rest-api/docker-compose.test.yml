@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  app_test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: test
+    volumes:
+      - .:/app
+    environment:
+      - DB_HOST=db_test
+      - DB_USER=test_user
+      - DB_PASSWORD=test_password
+      - DB_NAME=smart_pantry_test
+      - JWT_SECRET=test_secret
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - db_test
+    command: go test -v -cover ./...
+
+  db_test:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - POSTGRES_DB=smart_pantry_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data

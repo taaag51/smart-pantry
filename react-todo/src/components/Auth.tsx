@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { useMutateAuth } from '../hooks/useMutateAuth'
+import { useError } from '../hooks/useError'
 import {
   Container,
   Box,
@@ -8,6 +9,9 @@ import {
   Button,
   Paper,
   IconButton,
+  CircularProgress,
+  Snackbar,
+  Alert,
 } from '@mui/material'
 import {
   KitchenOutlined,
@@ -19,28 +23,40 @@ export const Auth = () => {
   const [pw, setPw] = useState('')
   const [isLogin, setIsLogin] = useState(true)
   const { loginMutation, registerMutation } = useMutateAuth()
+  const { errorMessage, setErrorMessage } = useError()
 
   const submitAuthHandler = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (isLogin) {
-      loginMutation.mutate({
-        email: email,
-        password: pw,
-      })
-    } else {
-      await registerMutation
-        .mutateAsync({
+    if (!email || !pw) {
+      setErrorMessage('メールアドレスとパスワードを入力してください')
+      return
+    }
+
+    try {
+      if (isLogin) {
+        await loginMutation.mutateAsync({
           email: email,
           password: pw,
         })
-        .then(() =>
-          loginMutation.mutate({
+      } else {
+        await registerMutation
+          .mutateAsync({
             email: email,
             password: pw,
           })
-        )
+          .then(() =>
+            loginMutation.mutate({
+              email: email,
+              password: pw,
+            })
+          )
+      }
+    } catch (error) {
+      console.error('Auth error:', error)
     }
   }
+
+  const isLoading = loginMutation.isPending || registerMutation.isPending
 
   return (
     <Container component="main" maxWidth="xs">
@@ -113,6 +129,8 @@ export const Auth = () => {
               autoFocus
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isLoading}
+              error={!!errorMessage && errorMessage.includes('メールアドレス')}
             />
             <TextField
               margin="normal"
@@ -125,15 +143,32 @@ export const Auth = () => {
               autoComplete="current-password"
               value={pw}
               onChange={(e) => setPw(e.target.value)}
+              disabled={isLoading}
+              error={!!errorMessage && errorMessage.includes('パスワード')}
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={!email || !pw}
+              sx={{ mt: 3, mb: 2, position: 'relative', height: 36.5 }}
+              disabled={!email || !pw || isLoading}
             >
-              {isLogin ? 'ログイン' : '登録'}
+              {isLoading ? (
+                <CircularProgress
+                  size={24}
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    marginTop: '-12px',
+                    marginLeft: '-12px',
+                  }}
+                />
+              ) : isLogin ? (
+                'ログイン'
+              ) : (
+                '登録'
+              )}
             </Button>
           </Box>
 
@@ -144,15 +179,34 @@ export const Auth = () => {
                 : 'アカウントをお持ちの方は'}
             </Typography>
             <IconButton
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setErrorMessage('')
+              }}
               size="small"
               sx={{ ml: 1 }}
+              disabled={isLoading}
             >
               <SwapHorizIcon />
             </IconButton>
           </Box>
         </Paper>
       </Box>
+
+      <Snackbar
+        open={!!errorMessage}
+        autoHideDuration={6000}
+        onClose={() => setErrorMessage('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setErrorMessage('')}
+          severity="error"
+          sx={{ width: '100%' }}
+        >
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   )
 }

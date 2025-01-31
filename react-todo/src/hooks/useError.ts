@@ -1,45 +1,64 @@
-import axios from 'axios'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CsrfToken } from '../types'
 import useStore from '../store'
+import axiosInstance from '../lib/axios'
 
 export const useError = () => {
   const navigate = useNavigate()
   const resetEditedTask = useStore((state) => state.resetEditedTask)
+  const [errorMessage, setErrorMessage] = useState<string>('')
+
   const getCsrfToken = async () => {
-    const { data } = await axios.get<CsrfToken>(
-      `${process.env.REACT_APP_API_URL}/csrf`
-    )
-    axios.defaults.headers.common['X-CSRF-TOKEN'] = data.csrf_token
+    try {
+      const { data } = await axiosInstance.get('/csrf')
+      if (data.csrf_token) {
+        axiosInstance.defaults.headers.common['X-CSRF-Token'] = data.csrf_token
+      }
+    } catch (error) {
+      console.error('Failed to get CSRF token:', error)
+      setErrorMessage('サーバーとの通信に失敗しました')
+    }
   }
+
   const switchErrorHandling = (msg: string) => {
     switch (msg) {
       case 'invalid csrf token':
         getCsrfToken()
-        alert('CSRF token is invalid, please try again')
+        setErrorMessage('セッションが無効です。もう一度お試しください')
+        break
+      case 'invalid email or password':
+        setErrorMessage('メールアドレスまたはパスワードが正しくありません')
         break
       case 'invalid or expired jwt':
-        alert('access token expired, please login')
+        localStorage.removeItem('accessToken')
+        setErrorMessage(
+          'セッションの有効期限が切れました。再度ログインしてください'
+        )
         resetEditedTask()
         navigate('/')
         break
       case 'missing or malformed jwt':
-        alert('access token is not valid, please login')
+        localStorage.removeItem('accessToken')
+        setErrorMessage('認証情報が無効です。再度ログインしてください')
         resetEditedTask()
         navigate('/')
         break
-      case 'duplicated key not allowed':
-        alert('email already exist, please use another one')
+      case 'email already exists':
+        setErrorMessage('このメールアドレスは既に登録されています')
         break
-      case 'crypto/bcrypt: hashedPassword is not the hash of the given password':
-        alert('password is not correct')
+      case 'failed to create user':
+        setErrorMessage('ユーザー登録に失敗しました')
+        break
+      case 'failed to generate token':
+        setErrorMessage('ログインに失敗しました。もう一度お試しください')
         break
       case 'record not found':
-        alert('email is not correct')
+        setErrorMessage('メールアドレスまたはパスワードが正しくありません')
         break
       default:
-        alert(msg)
+        setErrorMessage(msg)
     }
   }
-  return { switchErrorHandling }
+
+  return { switchErrorHandling, errorMessage, setErrorMessage }
 }

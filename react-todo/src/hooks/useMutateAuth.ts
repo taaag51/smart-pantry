@@ -25,13 +25,15 @@ export const useMutateAuth = () => {
       return await axiosInstance.post('/login', user)
     },
     onSuccess: () => {
-      navigate('/pantry')
+      window.dispatchEvent(new CustomEvent('login-success'))
+      navigate('/pantry', { replace: true })
     },
     onError: (err: AxiosError<ApiError>) => {
+      console.error('Login error:', err)
       if (err.response?.data.message) {
         switchErrorHandling(err.response.data.message)
       } else {
-        switchErrorHandling('エラーが発生しました')
+        switchErrorHandling('ログインに失敗しました')
       }
     },
   })
@@ -49,7 +51,7 @@ export const useMutateAuth = () => {
       if (err.response?.data.message) {
         switchErrorHandling(err.response.data.message)
       } else {
-        switchErrorHandling('エラーが発生しました')
+        switchErrorHandling('アカウント作成に失敗しました')
       }
     },
   })
@@ -61,14 +63,15 @@ export const useMutateAuth = () => {
         return await axiosInstance.post('/logout')
       },
       onSuccess: () => {
+        window.dispatchEvent(new CustomEvent('logout-success'))
         resetEditedTask()
-        navigate('/')
+        navigate('/', { replace: true })
       },
       onError: (err: AxiosError<ApiError>) => {
         if (err.response?.data.message) {
           switchErrorHandling(err.response.data.message)
         } else {
-          switchErrorHandling('エラーが発生しました')
+          switchErrorHandling('ログアウトに失敗しました')
         }
       },
     }

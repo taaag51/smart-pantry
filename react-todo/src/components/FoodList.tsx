@@ -17,8 +17,8 @@ export const FoodList: FC = () => {
       createFoodItemMutation.mutate({
         title,
         quantity,
-        expiry_date: new Date(expiryDate),
-      } as Omit<FoodItem, 'id'>)
+        expiry_date: expiryDate, // Date型からstring型に変更
+      })
       setTitle('')
       setQuantity(1)
       setExpiryDate('')

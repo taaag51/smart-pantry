@@ -25,9 +25,9 @@ export type FoodItem = {
   id: number
   title: string
   quantity: number
-  expiry_date: Date
-  created_at?: Date
-  updated_at?: Date
+  expiry_date: string // Date型から文字列型に変更
+  created_at?: string // 同様に文字列型に変更
+  updated_at?: string // 同様に文字列型に変更
   user_id?: number
 }
 
@@ -36,8 +36,8 @@ export type Recipe = {
   title: string
   ingredients: string[]
   instructions: string
-  created_at?: Date
-  updated_at?: Date
+  created_at?: string // 同様に文字列型に変更
+  updated_at?: string // 同様に文字列型に変更
 }
 
 export type EditedTask = {

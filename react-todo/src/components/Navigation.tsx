@@ -1,4 +1,5 @@
 import { FC } from 'react'
+import { useMutateAuth } from '../hooks/useMutateAuth' // 修正
 import { AppBar, Toolbar, Button, Box } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu'
@@ -8,6 +9,8 @@ import MenuBookIcon from '@mui/icons-material/MenuBook'
 export const Navigation: FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
+
+  const { logoutMutation } = useMutateAuth()
 
   return (
     <AppBar position="static">
@@ -45,6 +48,14 @@ export const Navigation: FC = () => {
             }}
           >
             レシピ提案
+          </Button>
+          <Button
+            color="inherit"
+            onClick={() => {
+              logoutMutation.mutate() // ログアウト処理を呼び出す
+            }}
+          >
+            ログアウト
           </Button>
         </Box>
       </Toolbar>

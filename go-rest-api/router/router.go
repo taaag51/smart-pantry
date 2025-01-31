@@ -13,18 +13,21 @@ import (
 
 func NewRouter(tc controller.ITaskController, uc controller.IUserController, fc controller.IFoodItemController, rc controller.IRecipeController) *echo.Echo {
 	e := echo.New()
+
+	// CORSミドルウェアの設定を修正
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"http://localhost:3000"},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept,
-			echo.HeaderAccessControlAllowHeaders, echo.HeaderXCSRFToken},
-		AllowMethods:     []string{"GET", "PUT", "POST", "DELETE"},
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"*"},
+		AllowHeaders:     []string{"*"},
 		AllowCredentials: true,
+		MaxAge:           86400,
 	}))
+
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		CookiePath:     "/",
-		CookieDomain:   os.Getenv("API_DOMAIN"),
 		CookieHTTPOnly: true,
-		CookieSameSite: http.SameSiteNoneMode,
+		CookieSameSite: http.SameSiteDefaultMode,
+		TokenLookup:    "header:X-CSRF-Token",
 	}))
 
 	// 認証関連
@@ -42,6 +45,9 @@ func NewRouter(tc controller.ITaskController, uc controller.IUserController, fc 
 		SigningKey:  []byte(os.Getenv("SECRET")),
 		TokenLookup: "cookie:token",
 	}))
+
+	// トークン検証エンドポイント
+	api.GET("/verify-token", uc.VerifyToken)
 
 	// タスク関連
 	tasks := api.Group("/tasks")

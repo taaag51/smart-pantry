@@ -27,15 +27,21 @@ func (ru *recipeUsecase) GetRecipeSuggestions(userId uint) (string, error) {
 		return "", fmt.Errorf("食材の取得に失敗しました: %v", err)
 	}
 
-	// 食材が存在しない場合はエラーを返す
+	// 食材が存在しない場合は適切なメッセージを返す
 	if len(foodItems) == 0 {
-		return "", fmt.Errorf("食材が登録されていません")
+		return "食材が登録されていません。食材を追加してからレシピを取得してください。", nil
 	}
 
 	// レシピを生成
 	recipe, err := ru.gs.GenerateRecipe(foodItems)
 	if err != nil {
-		return "", fmt.Errorf("レシピの生成に失敗しました: %v", err)
+		// Geminiサービスのエラーをログに出力
+		fmt.Printf("Geminiサービスエラー: %v\n", err)
+		return "レシピの生成中にエラーが発生しました。しばらく待ってから再試行してください。", nil
+	}
+
+	if recipe == "" {
+		return "レシピを生成できませんでした。別の食材を試してみてください。", nil
 	}
 
 	return recipe, nil

@@ -10,24 +10,24 @@ interface Props {
 export const FoodItem: FC<Props> = ({ foodItem }) => {
   const { deleteFoodItemMutation } = useMutateFoodItem()
 
-  const getDaysUntilExpiry = (expiryDate: Date): number => {
+  const getDaysUntilExpiry = (expiryDateStr: string): number => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const expiry = new Date(expiryDate)
+    const expiry = new Date(expiryDateStr)
     expiry.setHours(0, 0, 0, 0)
     return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24))
   }
 
-  const isExpired = (expiryDate: Date) => {
-    return getDaysUntilExpiry(expiryDate) < 0
+  const isExpired = (expiryDateStr: string) => {
+    return getDaysUntilExpiry(expiryDateStr) < 0
   }
 
-  const isExpiringSoon = (expiryDate: Date) => {
-    const daysUntilExpiry = getDaysUntilExpiry(expiryDate)
+  const isExpiringSoon = (expiryDateStr: string) => {
+    const daysUntilExpiry = getDaysUntilExpiry(expiryDateStr)
     return daysUntilExpiry >= 0 && daysUntilExpiry <= 7
   }
 
-  const getAccentColor = () => {
+  const getStatusColor = () => {
     if (isExpired(foodItem.expiry_date)) {
       return 'error.main'
     }
@@ -44,25 +44,15 @@ export const FoodItem: FC<Props> = ({ foodItem }) => {
       sx={{
         p: 2.5,
         mb: 2,
-        borderRadius: 1,
-        border: '1px solid rgba(0, 0, 0, 0.12)',
+        borderRadius: 2,
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+        border: '1px solid rgba(0, 0, 0, 0.08)',
         position: 'relative',
         overflow: 'hidden',
-        transition: 'all 0.2s ease-in-out',
+        transition: 'transform 0.2s ease-in-out',
         listStyle: 'none',
         '&:hover': {
-          borderColor: 'rgba(0, 0, 0, 0.24)',
-          transform: 'translateY(-1px)',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-        },
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '4px',
-          height: '100%',
-          backgroundColor: getAccentColor(),
+          transform: 'translateY(-2px)',
         },
       }}
     >
@@ -76,19 +66,20 @@ export const FoodItem: FC<Props> = ({ foodItem }) => {
         <Box>
           <Typography
             sx={{
-              fontSize: '0.975rem',
+              fontSize: '1rem',
               fontWeight: 500,
               color: 'rgba(0, 0, 0, 0.87)',
               mb: 1,
               display: 'flex',
               alignItems: 'center',
+              gap: 1,
               '&::before': {
                 content: '""',
-                width: '4px',
-                height: '4px',
+                width: 8,
+                height: 8,
                 borderRadius: '50%',
-                backgroundColor: getAccentColor(),
-                marginRight: '8px',
+                bgcolor: getStatusColor(),
+                flexShrink: 0,
               },
             }}
           >
@@ -98,25 +89,16 @@ export const FoodItem: FC<Props> = ({ foodItem }) => {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 2.5,
+              gap: 3,
               color: 'rgba(0, 0, 0, 0.6)',
-              position: 'relative',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                left: -12,
-                top: '50%',
-                width: '1px',
-                height: '70%',
-                transform: 'translateY(-50%)',
-                backgroundColor: 'rgba(0, 0, 0, 0.08)',
-              },
             }}
           >
             <Typography
               variant="body2"
               sx={{
                 fontSize: '0.875rem',
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
               数量: {foodItem.quantity}
@@ -125,18 +107,8 @@ export const FoodItem: FC<Props> = ({ foodItem }) => {
               variant="body2"
               sx={{
                 fontSize: '0.875rem',
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  left: -16,
-                  top: '50%',
-                  width: '4px',
-                  height: '4px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                  transform: 'translateY(-50%)',
-                },
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
               期限: {new Date(foodItem.expiry_date).toLocaleDateString('ja-JP')}
@@ -145,20 +117,10 @@ export const FoodItem: FC<Props> = ({ foodItem }) => {
               variant="body2"
               sx={{
                 fontSize: '0.875rem',
-                color: getAccentColor(),
+                color: getStatusColor(),
                 fontWeight: 500,
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  left: -16,
-                  top: '50%',
-                  width: '4px',
-                  height: '4px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                  transform: 'translateY(-50%)',
-                },
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
               残り{getDaysUntilExpiry(foodItem.expiry_date)}日

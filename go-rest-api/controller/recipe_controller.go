@@ -22,8 +22,8 @@ func NewRecipeController(ru usecase.IRecipeUsecase) IRecipeController {
 
 func (rc *recipeController) GetRecipeSuggestions(c echo.Context) error {
 	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(jwt.MapClaims)
-	userId := uint(claims["user_id"].(float64))
+	claims := user.Claims.(*jwt.MapClaims)
+	userId := uint((*claims)["user_id"].(float64))
 
 	// レシピ提案を取得
 	suggestions, err := rc.ru.GetRecipeSuggestions(userId)
@@ -33,7 +33,5 @@ func (rc *recipeController) GetRecipeSuggestions(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, map[string]string{
-		"recipe": suggestions,
-	})
+	return c.JSON(http.StatusOK, []string{suggestions})
 }

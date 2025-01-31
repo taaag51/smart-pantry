@@ -40,17 +40,29 @@ func (s *geminiService) GenerateRecipe(foodItems []model.FoodItem) (string, erro
 		return "", fmt.Errorf("食材が指定されていません")
 	}
 
+	fmt.Printf("食材リスト: %+v\n", foodItems)
+
 	// 期限切れ間近の食材を抽出
 	var expiringItems []model.FoodItem
 	for _, item := range foodItems {
-		daysUntilExpiry := time.Until(item.ExpiryDate).Hours() / 24
-		if daysUntilExpiry > 0 && daysUntilExpiry <= 7 {
+		// 現在時刻と賞味期限の差を計算
+		timeUntilExpiry := item.ExpiryDate.Sub(time.Now())
+		daysUntilExpiry := timeUntilExpiry.Hours() / 24
+		fmt.Printf("食材: %s, 期限まで: %.2f日\n", item.Title, daysUntilExpiry)
+
+		// 7日以内に期限切れになる食材を追加
+		if daysUntilExpiry >= 0 && daysUntilExpiry <= 7 {
+			fmt.Printf("期限切れ間近の食材として追加: %s\n", item.Title)
 			expiringItems = append(expiringItems, item)
 		}
 	}
 
+	// すべての食材を使用
 	if len(expiringItems) == 0 {
-		return "", fmt.Errorf("期限切れ間近の食材がありません")
+		fmt.Println("期限切れ間近の食材がないため、すべての食材を使用します")
+		expiringItems = foodItems
+	} else {
+		fmt.Printf("期限切れ間近の食材数: %d\n", len(expiringItems))
 	}
 
 	// プロンプトの構築
@@ -85,11 +97,25 @@ func (s *geminiService) GenerateRecipe(foodItems []model.FoodItem) (string, erro
 		return "", fmt.Errorf("レシピを生成できませんでした")
 	}
 
-	// レスポンスの取得
+	// レスポンスの取得とデバッグ出力
+	fmt.Printf("Gemini API レスポンス: %+v\n", resp)
+
+	if len(resp.Candidates) == 0 {
+		return "", fmt.Errorf("レスポンスが空です")
+	}
+
+	if len(resp.Candidates[0].Content.Parts) == 0 {
+		return "", fmt.Errorf("レスポンスの内容が空です")
+	}
+
 	recipe, ok := resp.Candidates[0].Content.Parts[0].(genai.Text)
 	if !ok {
+		fmt.Printf("予期しないレスポンス形式: %T\n", resp.Candidates[0].Content.Parts[0])
 		return "", fmt.Errorf("レスポンスの形式が不正です")
 	}
 
-	return string(recipe), nil
+	recipeStr := string(recipe)
+	fmt.Printf("生成されたレシピ: %s\n", recipeStr)
+
+	return recipeStr, nil
 }
