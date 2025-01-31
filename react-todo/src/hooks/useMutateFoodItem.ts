@@ -1,94 +1,102 @@
-import axios from 'axios'
+import { AxiosError, AxiosResponse } from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { FoodItem } from '../types'
 import { useError } from './useError'
+import axiosInstance, { getCsrfToken } from '../lib/axios'
+
+interface ApiError {
+  message: string
+}
 
 export const useMutateFoodItem = () => {
   const queryClient = useQueryClient()
   const { switchErrorHandling } = useError()
 
-  const createFoodItemMutation = useMutation(
-    (foodItem: Omit<FoodItem, 'id'>) =>
-      axios.post<FoodItem>(
-        `${process.env.REACT_APP_API_URL}/food-items`,
+  const createFoodItemMutation = useMutation({
+    mutationFn: async (foodItem: Omit<FoodItem, 'id'>) => {
+      await getCsrfToken()
+      return await axiosInstance.post<{ data: FoodItem }>(
+        '/food-items',
         foodItem
-      ),
-    {
-      onSuccess: (res) => {
-        const previousFoodItems = queryClient.getQueryData<FoodItem[]>([
-          'foodItems',
-        ])
-        if (previousFoodItems) {
-          queryClient.setQueryData(
-            ['foodItems'],
-            [...previousFoodItems, res.data]
-          )
-        }
-      },
-      onError: (err: any) => {
-        if (err.response.data.message) {
-          switchErrorHandling(err.response.data.message)
-        } else {
-          switchErrorHandling('食材の作成に失敗しました')
-        }
-      },
-    }
-  )
+      )
+    },
+    onSuccess: (res: AxiosResponse<{ data: FoodItem }>) => {
+      const previousFoodItems = queryClient.getQueryData<FoodItem[]>([
+        'foodItems',
+      ])
+      if (previousFoodItems) {
+        queryClient.setQueryData(
+          ['foodItems'],
+          [...previousFoodItems, res.data]
+        )
+      }
+    },
+    onError: (err: AxiosError<ApiError>) => {
+      if (err.response?.data.message) {
+        switchErrorHandling(err.response.data.message)
+      } else {
+        switchErrorHandling('食材の作成に失敗しました')
+      }
+    },
+  })
 
-  const updateFoodItemMutation = useMutation(
-    (foodItem: FoodItem) =>
-      axios.put<FoodItem>(
-        `${process.env.REACT_APP_API_URL}/food-items/${foodItem.id}`,
+  const updateFoodItemMutation = useMutation({
+    mutationFn: async (foodItem: FoodItem) => {
+      await getCsrfToken()
+      return await axiosInstance.put<{ data: FoodItem }>(
+        `/food-items/${foodItem.id}`,
         foodItem
-      ),
-    {
-      onSuccess: (res, variables) => {
-        const previousFoodItems = queryClient.getQueryData<FoodItem[]>([
-          'foodItems',
-        ])
-        if (previousFoodItems) {
-          queryClient.setQueryData(
-            ['foodItems'],
-            previousFoodItems.map((item) =>
-              item.id === variables.id ? res.data : item
-            )
+      )
+    },
+    onSuccess: (
+      res: AxiosResponse<{ data: FoodItem }>,
+      variables: FoodItem
+    ) => {
+      const previousFoodItems = queryClient.getQueryData<FoodItem[]>([
+        'foodItems',
+      ])
+      if (previousFoodItems) {
+        queryClient.setQueryData(
+          ['foodItems'],
+          previousFoodItems.map((item) =>
+            item.id === variables.id ? res.data : item
           )
-        }
-      },
-      onError: (err: any) => {
-        if (err.response.data.message) {
-          switchErrorHandling(err.response.data.message)
-        } else {
-          switchErrorHandling('食材の更新に失敗しました')
-        }
-      },
-    }
-  )
+        )
+      }
+    },
+    onError: (err: AxiosError<ApiError>) => {
+      if (err.response?.data.message) {
+        switchErrorHandling(err.response.data.message)
+      } else {
+        switchErrorHandling('食材の更新に失敗しました')
+      }
+    },
+  })
 
-  const deleteFoodItemMutation = useMutation(
-    (id: number) =>
-      axios.delete(`${process.env.REACT_APP_API_URL}/food-items/${id}`),
-    {
-      onSuccess: (_, variables) => {
-        const previousFoodItems = queryClient.getQueryData<FoodItem[]>([
-          'foodItems',
-        ])
-        if (previousFoodItems) {
-          queryClient.setQueryData(
-            ['foodItems'],
-            previousFoodItems.filter((item) => item.id !== variables)
-          )
-        }
-      },
-      onError: (err: any) => {
-        if (err.response.data.message) {
-          switchErrorHandling(err.response.data.message)
-        } else {
-          switchErrorHandling('食材の削除に失敗しました')
-        }
-      },
-    }
-  )
+  const deleteFoodItemMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await getCsrfToken()
+      return await axiosInstance.delete(`/food-items/${id}`)
+    },
+    onSuccess: (_, variables: number) => {
+      const previousFoodItems = queryClient.getQueryData<FoodItem[]>([
+        'foodItems',
+      ])
+      if (previousFoodItems) {
+        queryClient.setQueryData(
+          ['foodItems'],
+          previousFoodItems.filter((item) => item.id !== variables)
+        )
+      }
+    },
+    onError: (err: AxiosError<ApiError>) => {
+      if (err.response?.data.message) {
+        switchErrorHandling(err.response.data.message)
+      } else {
+        switchErrorHandling('食材の削除に失敗しました')
+      }
+    },
+  })
 
   return {
     createFoodItemMutation,

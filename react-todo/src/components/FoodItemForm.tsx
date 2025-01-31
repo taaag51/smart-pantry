@@ -12,7 +12,7 @@ import {
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
-import ja from 'date-fns/locale/ja'
+import jaLocale from 'date-fns/locale/ja'
 
 export const FoodItemForm: FC = () => {
   const [title, setTitle] = useState('')
@@ -27,7 +27,7 @@ export const FoodItemForm: FC = () => {
     createFoodItemMutation.mutate({
       title,
       quantity,
-      expiryDate,
+      expiry_date: expiryDate,
     })
     setTitle('')
     setQuantity(1)
@@ -59,7 +59,10 @@ export const FoodItemForm: FC = () => {
       </FormControl>
 
       <FormControl fullWidth sx={{ mb: 2 }}>
-        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ja}>
+        <LocalizationProvider
+          dateAdapter={AdapterDateFns}
+          adapterLocale={jaLocale}
+        >
           <DatePicker
             label="賞味期限"
             value={expiryDate}

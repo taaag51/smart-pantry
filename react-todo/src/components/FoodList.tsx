@@ -1,25 +1,28 @@
 import React, { FC, useState } from 'react'
 import { useQueryFoodItems } from '../hooks/useQueryFoodItems'
 import { useMutateFoodItem } from '../hooks/useMutateFoodItem'
-import { FoodItem } from './FoodItem'
+import { FoodItem as FoodItemComponent } from './FoodItem'
+import { FoodItem } from '../types'
 
 export const FoodList: FC = () => {
   const [title, setTitle] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [expiryDate, setExpiryDate] = useState('')
-  const { data: foodItems } = useQueryFoodItems()
+  const { data: foodItems } = useQueryFoodItems() as { data: FoodItem[] }
   const { createFoodItemMutation } = useMutateFoodItem()
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    createFoodItemMutation.mutate({
-      title,
-      quantity,
-      expiryDate: new Date(expiryDate),
-    })
-    setTitle('')
-    setQuantity(1)
-    setExpiryDate('')
+    if (title && quantity && expiryDate) {
+      createFoodItemMutation.mutate({
+        title,
+        quantity,
+        expiry_date: new Date(expiryDate),
+      } as Omit<FoodItem, 'id'>)
+      setTitle('')
+      setQuantity(1)
+      setExpiryDate('')
+    }
   }
 
   return (
@@ -85,8 +88,8 @@ export const FoodList: FC = () => {
       <div>
         <h2 className="text-xl font-bold mb-4">食材一覧</h2>
         <ul>
-          {foodItems?.map((foodItem) => (
-            <FoodItem key={foodItem.id} foodItem={foodItem} />
+          {foodItems?.map((foodItem: FoodItem) => (
+            <FoodItemComponent key={foodItem.id} foodItem={foodItem} />
           ))}
         </ul>
       </div>

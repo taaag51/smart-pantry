@@ -1,4 +1,5 @@
 import React, { FC } from 'react'
+import { Box, Button, Typography, Paper } from '@mui/material'
 import { FoodItem as FoodItemType } from '../types'
 import { useMutateFoodItem } from '../hooks/useMutateFoodItem'
 
@@ -7,67 +8,194 @@ interface Props {
 }
 
 export const FoodItem: FC<Props> = ({ foodItem }) => {
-  const { updateFoodItemMutation, deleteFoodItemMutation } = useMutateFoodItem()
-  const isExpiringSoon = (expiryDate: Date) => {
+  const { deleteFoodItemMutation } = useMutateFoodItem()
+
+  const getDaysUntilExpiry = (expiryDate: Date): number => {
     const today = new Date()
-    const daysUntilExpiry = Math.ceil(
-      (new Date(expiryDate).getTime() - today.getTime()) / (1000 * 3600 * 24)
-    )
-    return daysUntilExpiry <= 7 && daysUntilExpiry > 0
+    today.setHours(0, 0, 0, 0)
+    const expiry = new Date(expiryDate)
+    expiry.setHours(0, 0, 0, 0)
+    return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 3600 * 24))
   }
 
   const isExpired = (expiryDate: Date) => {
-    const today = new Date()
-    return new Date(expiryDate) < today
+    return getDaysUntilExpiry(expiryDate) < 0
+  }
+
+  const isExpiringSoon = (expiryDate: Date) => {
+    const daysUntilExpiry = getDaysUntilExpiry(expiryDate)
+    return daysUntilExpiry >= 0 && daysUntilExpiry <= 7
+  }
+
+  const getAccentColor = () => {
+    if (isExpired(foodItem.expiry_date)) {
+      return 'error.main'
+    }
+    if (isExpiringSoon(foodItem.expiry_date)) {
+      return 'warning.main'
+    }
+    return 'info.main'
   }
 
   return (
-    <li className="my-3">
-      <div className="flex justify-between items-center p-4 bg-white border rounded-lg shadow-lg">
-        <div>
-          <span
-            className={`text-lg font-semibold ${
-              isExpired(foodItem.expiryDate)
-                ? 'text-red-600'
-                : isExpiringSoon(foodItem.expiryDate)
-                ? 'text-yellow-600'
-                : 'text-gray-700'
-            }`}
+    <Paper
+      component="li"
+      elevation={0}
+      sx={{
+        p: 2.5,
+        mb: 2,
+        borderRadius: 1,
+        border: '1px solid rgba(0, 0, 0, 0.12)',
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'all 0.2s ease-in-out',
+        listStyle: 'none',
+        '&:hover': {
+          borderColor: 'rgba(0, 0, 0, 0.24)',
+          transform: 'translateY(-1px)',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+        },
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '4px',
+          height: '100%',
+          backgroundColor: getAccentColor(),
+        },
+      }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+        }}
+      >
+        <Box>
+          <Typography
+            sx={{
+              fontSize: '0.975rem',
+              fontWeight: 500,
+              color: 'rgba(0, 0, 0, 0.87)',
+              mb: 1,
+              display: 'flex',
+              alignItems: 'center',
+              '&::before': {
+                content: '""',
+                width: '4px',
+                height: '4px',
+                borderRadius: '50%',
+                backgroundColor: getAccentColor(),
+                marginRight: '8px',
+              },
+            }}
           >
             {foodItem.title}
-          </span>
-          <div className="mt-1 text-sm text-gray-500">
-            <p>数量: {foodItem.quantity}</p>
-            <p>
-              賞味期限:{' '}
-              {new Date(foodItem.expiryDate).toLocaleDateString('ja-JP', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-              })}
-              {isExpiringSoon(foodItem.expiryDate) && (
-                <span className="ml-2 text-yellow-600">
-                  (期限切れまで
-                  {Math.ceil(
-                    (new Date(foodItem.expiryDate).getTime() -
-                      new Date().getTime()) /
-                      (1000 * 3600 * 24)
-                  )}
-                  日)
-                </span>
-              )}
-            </p>
-          </div>
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => deleteFoodItemMutation.mutate(foodItem.id)}
-            className="px-3 py-2 text-white bg-red-500 rounded hover:bg-red-600 focus:outline-none"
+          </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2.5,
+              color: 'rgba(0, 0, 0, 0.6)',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: -12,
+                top: '50%',
+                width: '1px',
+                height: '70%',
+                transform: 'translateY(-50%)',
+                backgroundColor: 'rgba(0, 0, 0, 0.08)',
+              },
+            }}
           >
-            削除
-          </button>
-        </div>
-      </div>
-    </li>
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: '0.875rem',
+              }}
+            >
+              数量: {foodItem.quantity}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: '0.875rem',
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: -16,
+                  top: '50%',
+                  width: '4px',
+                  height: '4px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                  transform: 'translateY(-50%)',
+                },
+              }}
+            >
+              期限: {new Date(foodItem.expiry_date).toLocaleDateString('ja-JP')}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: '0.875rem',
+                color: getAccentColor(),
+                fontWeight: 500,
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: -16,
+                  top: '50%',
+                  width: '4px',
+                  height: '4px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                  transform: 'translateY(-50%)',
+                },
+              }}
+            >
+              残り{getDaysUntilExpiry(foodItem.expiry_date)}日
+            </Typography>
+          </Box>
+        </Box>
+        <Button
+          onClick={() => deleteFoodItemMutation.mutate(foodItem.id)}
+          variant="text"
+          sx={{
+            minWidth: 'auto',
+            color: 'rgba(0, 0, 0, 0.6)',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            textTransform: 'none',
+            position: 'relative',
+            '&:hover': {
+              backgroundColor: 'transparent',
+              '&::after': {
+                width: '100%',
+              },
+            },
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              bottom: 6,
+              left: 0,
+              width: 0,
+              height: '1px',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              transition: 'width 0.2s ease-in-out',
+            },
+          }}
+        >
+          削除
+        </Button>
+      </Box>
+    </Paper>
   )
 }

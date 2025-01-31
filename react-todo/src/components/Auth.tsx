@@ -1,6 +1,18 @@
 import { useState, FormEvent } from 'react'
-import { CheckBadgeIcon, ArrowPathIcon } from '@heroicons/react/24/solid'
 import { useMutateAuth } from '../hooks/useMutateAuth'
+import {
+  Container,
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Paper,
+  IconButton,
+} from '@mui/material'
+import {
+  KitchenOutlined,
+  SwapHoriz as SwapHorizIcon,
+} from '@mui/icons-material'
 
 export const Auth = () => {
   const [email, setEmail] = useState('')
@@ -29,51 +41,118 @@ export const Auth = () => {
         )
     }
   }
+
   return (
-    <div className="flex justify-center items-center flex-col min-h-screen text-gray-600 font-mono">
-      <div className="flex items-center">
-        <CheckBadgeIcon className="h-8 w-8 mr-2 text-blue-500" />
-        <span className="text-center text-3xl font-extrabold">
-          Todo app by React/Go(Echo)
-        </span>
-      </div>
-      <h2 className="my-6">{isLogin ? 'Login' : 'Create a new account'}</h2>
-      <form onSubmit={submitAuthHandler}>
-        <div>
-          <input
-            className="mb-3 px-3 text-sm py-2 border border-gray-300"
-            name="email"
-            type="email"
-            autoFocus
-            placeholder="Email address"
-            onChange={(e) => setEmail(e.target.value)}
-            value={email}
-          />
-        </div>
-        <div>
-          <input
-            className="mb-3 px-3 text-sm py-2 border border-gray-300"
-            name="password"
-            type="password"
-            placeholder="Password"
-            onChange={(e) => setPw(e.target.value)}
-            value={pw}
-          />
-        </div>
-        <div className="flex justify-center my-2">
-          <button
-            className="disabled:opacity-40 py-2 px-4 rounded text-white bg-indigo-600"
-            disabled={!email || !pw}
-            type="submit"
+    <Container component="main" maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            padding: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            width: '100%',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: 'center',
+              gap: { xs: 1, sm: 2 },
+              mb: 3,
+            }}
           >
-            {isLogin ? 'Login' : 'Sign Up'}
-          </button>
-        </div>
-      </form>
-      <ArrowPathIcon
-        onClick={() => setIsLogin(!isLogin)}
-        className="h-6 w-6 my-2 text-blue-500 cursor-pointer"
-      />
-    </div>
+            <KitchenOutlined
+              sx={{
+                fontSize: { xs: 32, sm: 40 },
+                color: 'primary.main',
+              }}
+            />
+            <Typography
+              component="h1"
+              variant="h4"
+              fontWeight="bold"
+              sx={{
+                fontSize: { xs: '1.5rem', sm: '2rem' },
+                letterSpacing: 0.5,
+                color: 'primary.main',
+                textAlign: 'center',
+                lineHeight: 1.2,
+              }}
+            >
+              Smart Pantry
+            </Typography>
+          </Box>
+
+          <Typography component="h2" variant="h6" sx={{ mb: 3 }}>
+            {isLogin ? 'ログイン' : '新規アカウント作成'}
+          </Typography>
+
+          <Box
+            component="form"
+            onSubmit={submitAuthHandler}
+            sx={{ width: '100%' }}
+          >
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              id="email"
+              label="メールアドレス"
+              name="email"
+              autoComplete="email"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              margin="normal"
+              required
+              fullWidth
+              name="password"
+              label="パスワード"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={pw}
+              onChange={(e) => setPw(e.target.value)}
+            />
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              sx={{ mt: 3, mb: 2 }}
+              disabled={!email || !pw}
+            >
+              {isLogin ? 'ログイン' : '登録'}
+            </Button>
+          </Box>
+
+          <Box sx={{ mt: 1, display: 'flex', alignItems: 'center' }}>
+            <Typography variant="body2" color="text.secondary">
+              {isLogin
+                ? 'アカウントをお持ちでない方は'
+                : 'アカウントをお持ちの方は'}
+            </Typography>
+            <IconButton
+              onClick={() => setIsLogin(!isLogin)}
+              size="small"
+              sx={{ ml: 1 }}
+            >
+              <SwapHorizIcon />
+            </IconButton>
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
   )
 }

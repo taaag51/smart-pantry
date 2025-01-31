@@ -4,12 +4,12 @@ import useStore from '../store'
 import { Task } from '../types'
 import { useMutateTask } from '../hooks/useMutateTask'
 
-const TaskItemMemo: FC<Omit<Task, 'created_at' | 'updated_at'>> = ({
-  id,
-  title,
-}) => {
+interface TaskItemProps extends Omit<Task, 'created_at' | 'updated_at'> {}
+
+const TaskItemMemo: FC<TaskItemProps> = ({ id, title }) => {
   const updateTask = useStore((state) => state.updateEditedTask)
   const { deleteTaskMutation } = useMutateTask()
+
   return (
     <li className="my-3">
       <span className="font-bold">{title}</span>
@@ -18,8 +18,8 @@ const TaskItemMemo: FC<Omit<Task, 'created_at' | 'updated_at'>> = ({
           className="h-5 w-5 mx-1 text-blue-500 cursor-pointer"
           onClick={() => {
             updateTask({
-              id: id,
-              title: title,
+              id,
+              title,
             })
           }}
         />
@@ -33,4 +33,5 @@ const TaskItemMemo: FC<Omit<Task, 'created_at' | 'updated_at'>> = ({
     </li>
   )
 }
+
 export const TaskItem = memo(TaskItemMemo)

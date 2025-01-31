@@ -9,6 +9,7 @@ import { useQueryTasks } from '../hooks/useQueryTasks'
 import { useMutateTask } from '../hooks/useMutateTask'
 import { useMutateAuth } from '../hooks/useMutateAuth'
 import { TaskItem } from './TaskItem'
+import { Task } from '../types'
 
 export const Todo = () => {
   const queryClient = useQueryClient()
@@ -17,20 +18,26 @@ export const Todo = () => {
   const { data, isLoading } = useQueryTasks()
   const { createTaskMutation, updateTaskMutation } = useMutateTask()
   const { logoutMutation } = useMutateAuth()
+
   const submitTaskHandler = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (editedTask.id === 0)
+    if (editedTask.id === 0) {
       createTaskMutation.mutate({
         title: editedTask.title,
       })
-    else {
-      updateTaskMutation.mutate(editedTask)
+    } else {
+      updateTaskMutation.mutate({
+        id: editedTask.id,
+        title: editedTask.title,
+      })
     }
   }
+
   const logout = async () => {
     await logoutMutation.mutateAsync()
-    queryClient.removeQueries(['tasks'])
+    queryClient.removeQueries({ queryKey: ['tasks'] })
   }
+
   return (
     <div className="flex justify-center items-center flex-col min-h-screen text-gray-600 font-mono">
       <div className="flex items-center my-3">
@@ -62,9 +69,10 @@ export const Todo = () => {
         <p>Loading...</p>
       ) : (
         <ul className="my-5">
-          {data?.map((task) => (
-            <TaskItem key={task.id} id={task.id} title={task.title} />
-          ))}
+          {data &&
+            data.map((task: Task) => (
+              <TaskItem key={task.id} id={task.id} title={task.title} />
+            ))}
         </ul>
       )}
     </div>

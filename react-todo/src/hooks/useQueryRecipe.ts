@@ -1,34 +1,25 @@
-import axios from 'axios'
 import { useQuery } from '@tanstack/react-query'
-import { useError } from './useError'
+import axios from 'axios'
+import { Recipe } from '../types'
 
 export const useQueryRecipe = () => {
-  const { switchErrorHandling } = useError()
-
-  const getRecipe = async () => {
+  const getRecipes = async () => {
     try {
-      const { data } = await axios.get(
-        `${process.env.REACT_APP_API_URL}/recipes/suggestions`,
-        {
-          withCredentials: true,
-        }
+      const { data } = await axios.get<Recipe[]>(
+        `${process.env.REACT_APP_API_URL}/recipes/suggestions`
       )
-      return data.recipe as string
-    } catch (err: any) {
-      if (err.response.data.message) {
-        switchErrorHandling(err.response.data.message)
-      } else {
-        switchErrorHandling('レシピの取得に失敗しました')
-      }
-      throw err
+      return data || [] // データがない場合は空配列を返す
+    } catch (error) {
+      console.error('Failed to fetch recipes:', error)
+      return [] // エラー時は空配列を返す
     }
   }
 
   return useQuery({
-    queryKey: ['recipe'],
-    queryFn: getRecipe,
-    staleTime: 1000 * 60 * 5, // 5分間はキャッシュを使用
-    refetchInterval: 1000 * 60 * 5, // 5分ごとに自動更新
-    retry: false,
+    queryKey: ['recipes'],
+    queryFn: getRecipes,
+    staleTime: 1000 * 60 * 5, // 5分間キャッシュ
+    initialData: [], // 初期値として空配列を設定
+    retry: 1, // リトライ回数を1回に制限
   })
 }
