@@ -1,8 +1,9 @@
 package controller
 
 import (
-	"backend-api/usecase"
 	"net/http"
+
+	"github.com/taaag51/smart-pantry/backend-api/usecase"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"

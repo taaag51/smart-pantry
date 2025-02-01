@@ -1,14 +1,16 @@
 package usecase
 
 import (
-	"backend-api/model"
-	"backend-api/repository"
-	"backend-api/validator"
 	"errors"
 	"os"
 	"time"
 
+	"github.com/taaag51/smart-pantry/backend-api/model"
+	"github.com/taaag51/smart-pantry/backend-api/repository"
+	"github.com/taaag51/smart-pantry/backend-api/validator"
+
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/taaag51/smart-pantry/github.com/taaag51/smart-pantry/backend-api/validator"
 	"golang.org/x/crypto/bcrypt"
 )
 

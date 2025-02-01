@@ -1,9 +1,10 @@
 package main
 
 import (
-	"backend-api/db"
-	"backend-api/model"
 	"fmt"
+
+	"github.com/taaag51/smart-pantry/backend-api/db"
+	"github.com/taaag51/smart-pantry/backend-api/model"
 )
 
 func main() {

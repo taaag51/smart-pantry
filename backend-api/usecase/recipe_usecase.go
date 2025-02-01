@@ -1,11 +1,12 @@
 package usecase
 
 import (
-	"backend-api/model"
-	"backend-api/repository"
-	"backend-api/services"
 	"errors"
 	"fmt"
+
+	"github.com/taaag51/smart-pantry/backend-api/model"
+	"github.com/taaag51/smart-pantry/backend-api/repository"
+	"github.com/taaag51/smart-pantry/backend-api/services"
 )
 
 type IRecipeUsecase interface {

@@ -1,9 +1,10 @@
 package router
 
 import (
-	"backend-api/controller"
 	"net/http"
 	"os"
+
+	"github.com/taaag51/smart-pantry/backend-api/controller"
 
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"

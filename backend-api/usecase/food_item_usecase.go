@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"backend-api/model"
-	"backend-api/repository"
+	"github.com/taaag51/smart-pantry/backend-api/model"
+	"github.com/taaag51/smart-pantry/backend-api/repository"
 )
 
 type IFoodItemUsecase interface {

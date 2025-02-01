@@ -2,11 +2,13 @@
 package response
 
 import (
-	"backend-api/errors"
 	"net/http"
 	"time"
 
+	"github.com/taaag51/smart-pantry/backend-api/errors"
+
 	"github.com/labstack/echo/v4"
+	"github.com/taaag51/smart-pantry/backend-api/errors"
 )
 
 // ErrorResponse represents a standardized error response
