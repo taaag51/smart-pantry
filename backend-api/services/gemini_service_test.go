@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"backend-api/model"
-	"backend-api/testutil"
+	"github.com/taaag51/smart-pantry/backend-api/model"
+	"github.com/taaag51/smart-pantry/backend-api/testutil"
 
 	"github.com/stretchr/testify/assert"
 )

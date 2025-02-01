@@ -1,7 +1,7 @@
 package validator
 
 import (
-	"backend-api/model"
+	"github.com/taaag51/smart-pantry/backend-api/model"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"

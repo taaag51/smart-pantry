@@ -1,12 +1,13 @@
 package services
 
 import (
-	"backend-api/model"
 	"context"
 	"fmt"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/taaag51/smart-pantry/backend-api/model"
 
 	"github.com/google/generative-ai-go/genai"
 	"google.golang.org/api/option"
