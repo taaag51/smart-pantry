@@ -18,7 +18,7 @@ go-rest-api/
 ### フロントエンド (React)
 
 ```
-react-todo/
+react-app/
 ├── src/
 │   ├── components/   # UIコンポーネント
 │   ├── hooks/        # カスタムフック
@@ -26,6 +26,18 @@ react-todo/
 │   ├── store/        # 状態管理
 │   └── types/        # 型定義
 ```
+
+### CI/CD
+
+GitHub Actions を使用して、以下の自動化を実現しています：
+
+- プッシュ時のユニットテスト実行（バックエンド・フロントエンド）
+- テストカバレッジレポートの自動生成
+- Artifact を使用したビルド成果物の保存（v4）
+
+詳細は `.github/workflows/test.yml` を参照してください。
+
+注意：GitHub Actions artifact のアップロード/ダウンロードには actions/upload-artifact@v4 および actions/download-artifact@v4 を使用しています（2025 年 1 月 30 日の v3 非推奨化対応済み）。
 
 ## 現状の課題
 

@@ -25,7 +25,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -34,12 +34,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd go-rest-api
+          cd backend-api
           go mod download
 
       - name: Run backend tests
         run: |
-          cd go-rest-api
+          cd backend-api
           go test -v -coverprofile=coverage.out ./...
         env:
           DB_HOST: localhost
@@ -53,29 +53,29 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
-          path: go-rest-api/coverage.out
+          path: backend-api/coverage.out
 
   frontend-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: "npm"
-          cache-dependency-path: react-todo/package-lock.json
+          cache-dependency-path: react-app/package-lock.json
 
       - name: Install dependencies
         run: |
-          cd react-todo
+          cd react-app
           npm ci
 
       - name: Run frontend tests
         run: |
-          cd react-todo
+          cd react-app
           npm test -- --coverage --watchAll=false
         env:
           CI: true
@@ -84,14 +84,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage
-          path: react-todo/coverage/
+          path: react-app/coverage/
 
   coverage-report:
     needs: [backend-test, frontend-test]
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Download backend coverage
         uses: actions/download-artifact@v4
