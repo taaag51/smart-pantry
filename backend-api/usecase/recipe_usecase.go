@@ -35,7 +35,20 @@ func (ru *recipeUsecase) GetRecipeSuggestions(userId uint) (string, error) {
 	}
 
 	// レシピを生成
-	recipe, err := ru.gs.GenerateRecipe(foodItems)
+	// ユーザーIDでフィルタリングした食材のみを使用
+	var userFoodItems []model.FoodItem
+	for _, item := range foodItems {
+		if item.UserId == userId {
+			userFoodItems = append(userFoodItems, item)
+		}
+	}
+
+	// フィルタリング後の食材が0個の場合
+	if len(userFoodItems) == 0 {
+		return "", errors.New("登録されている食材がありません")
+	}
+
+	recipe, err := ru.gs.GenerateRecipe(userFoodItems)
 	if err != nil {
 		// Geminiサービスのエラーをログに出力
 		fmt.Printf("Geminiサービスエラー: %v\n", err)
