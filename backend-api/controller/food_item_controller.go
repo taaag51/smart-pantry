@@ -1,8 +1,8 @@
 package controller
 
 import (
-	"go-rest-api/model"
-	"go-rest-api/usecase"
+	"backend-api/model"
+	"backend-api/usecase"
 	"net/http"
 	"strconv"
 

@@ -1,11 +1,11 @@
 package controller
 
 import (
+	"backend-api/controller/response"
+	"backend-api/errors"
+	"backend-api/model"
 	"bytes"
 	"encoding/json"
-	"go-rest-api/controller/response"
-	"go-rest-api/errors"
-	"go-rest-api/model"
 	"net/http"
 	"net/http/httptest"
 	"testing"

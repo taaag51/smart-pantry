@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"go-rest-api/usecase"
+	"backend-api/usecase"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"

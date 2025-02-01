@@ -1,9 +1,9 @@
 package main
 
 import (
+	"backend-api/db"
+	"backend-api/model"
 	"fmt"
-	"go-rest-api/db"
-	"go-rest-api/model"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 package router
 
 import (
-	"go-rest-api/controller"
+	"backend-api/controller"
 	"net/http"
 	"os"
 

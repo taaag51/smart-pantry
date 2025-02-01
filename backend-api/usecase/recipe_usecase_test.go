@@ -1,7 +1,7 @@
 package usecase
 
 import (
-	"go-rest-api/model"
+	"backend-api/model"
 	"testing"
 	"time"
 

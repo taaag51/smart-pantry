@@ -1,13 +1,13 @@
 package main
 
 import (
-	"go-rest-api/controller"
-	"go-rest-api/db"
-	"go-rest-api/repository"
-	"go-rest-api/router"
-	"go-rest-api/services"
-	"go-rest-api/usecase"
-	"go-rest-api/validator"
+	"backend-api/controller"
+	"backend-api/db"
+	"backend-api/repository"
+	"backend-api/router"
+	"backend-api/services"
+	"backend-api/usecase"
+	"backend-api/validator"
 	"log"
 )
 

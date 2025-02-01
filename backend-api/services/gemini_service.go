@@ -1,9 +1,9 @@
 package services
 
 import (
+	"backend-api/model"
 	"context"
 	"fmt"
-	"go-rest-api/model"
 	"os"
 	"strings"
 	"time"

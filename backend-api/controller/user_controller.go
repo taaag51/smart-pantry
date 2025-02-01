@@ -4,8 +4,8 @@ package controller
 import (
 	"backend-api/controller/response"
 	"backend-api/errors"
-	"go-rest-api/model"
-	"go-rest-api/usecase"
+	"backend-api/model"
+	"backend-api/usecase"
 	"net/http"
 	"time"
 
