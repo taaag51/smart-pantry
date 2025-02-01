@@ -50,7 +50,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
           path: go-rest-api/coverage.out
@@ -81,7 +81,7 @@ jobs:
           CI: true
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage
           path: react-todo/coverage/
@@ -94,13 +94,13 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Download backend coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: backend-coverage
           path: coverage/backend
 
       - name: Download frontend coverage
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: frontend-coverage
           path: coverage/frontend
@@ -118,7 +118,7 @@ jobs:
           echo '```' >> coverage-report.md
 
       - name: Upload combined coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage-report.md

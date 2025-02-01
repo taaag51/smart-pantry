@@ -1,21 +1,8 @@
-✨ test: テスト自動化とCI/CD設定を追加
+🚀 feat(ci): GitHub Actions artifactアクションをv4へ移行
 
-テスト戦略の実装とGitHub Actionsによる自動化を行いました。
-
-主な変更点：
-- ユーザー認証機能のユニットテストを実装
-  - SignUp, LogIn, LogOutの正常系/異常系テスト
-  - JWT認証の検証テスト
-  - CSRFトークン処理のテスト
-- エラー定義の整理（usecase/errors.go）
-- GitHub Actionsワークフローの設定
-  - バックエンド/フロントエンドのテスト自動実行
-  - PostgreSQLサービスの統合
-  - テストカバレッジレポートの生成
+- CIワークフロー（.github/workflows/test.yml）において、actions/upload-artifactおよびactions/download-artifactのバージョンがv3からv4へ移行済みであることを確認。
+- GitHubのデプリケーション警告対応のため、最新のv4を利用。
+- CI/CDドキュメントに更新内容と、参考リンク（https://github.blog/changelog/2024-04-16-deprecation-notice-v3-of-the-artifact-actions/）を追記。
 
 # プロンプト履歴
-1. Q: テスト自動化と自己修復タスク
-   - 全APIエンドポイントのユニットテストカバレッジ100%
-   - ビジネスロジックの統合テスト
-   - エッジケースとセキュリティテスト
-   - CI/CDパイプラインとの統合
+1. GitHub Actions CIにおけるArtifactアクションのバージョンアップ対応依頼
