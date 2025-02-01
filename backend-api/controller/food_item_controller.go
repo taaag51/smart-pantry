@@ -53,7 +53,7 @@ func NewFoodItemController(fu usecase.IFoodItemUsecase) IFoodItemController {
 func (fc *foodItemController) GetAllFoodItems(c echo.Context) error {
 	foodItems, err := fc.fu.GetAllFoodItems()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{
+		return handleError(c, http.StatusInternalServerError, err)
 			Message: err.Error(),
 		})
 	}
@@ -71,14 +71,14 @@ func (fc *foodItemController) GetFoodItemById(c echo.Context) error {
 	id := c.Param("id")
 	foodItemId, err := strconv.Atoi(id)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, Response{
+		return handleError(c, http.StatusBadRequest, errors.New("Invalid ID format"))
 			Message: "Invalid ID format",
 		})
 	}
 
 	foodItem, err := fc.fu.GetFoodItemById(uint(foodItemId))
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{
+		return handleError(c, http.StatusInternalServerError, err)
 			Message: err.Error(),
 		})
 	}
@@ -112,7 +112,9 @@ func (fc *foodItemController) CreateFoodItem(c echo.Context) error {
 			Message: err.Error(),
 		})
 	}
-	return c.JSON(http.StatusCreated, Response{
+		return c.JSON(http.StatusCreated, Response{
+			Data:    createdFoodItem,
+			Message: "Food item created successfully",
 		Data:    createdFoodItem,
 		Message: "Food item created successfully",
 	})
@@ -126,7 +128,7 @@ func (fc *foodItemController) CreateFoodItem(c echo.Context) error {
 func (fc *foodItemController) UpdateFoodItem(c echo.Context) error {
 	foodItem := model.FoodItem{}
 	if err := c.Bind(&foodItem); err != nil {
-		return c.JSON(http.StatusBadRequest, Response{
+		return handleError(c, http.StatusBadRequest, errors.New("Invalid request format"))
 			Message: "Invalid request format",
 		})
 	}
@@ -142,7 +144,7 @@ func (fc *foodItemController) UpdateFoodItem(c echo.Context) error {
 	foodItem.ID = uint(foodItemId)
 
 	if err := fc.fu.UpdateFoodItem(foodItem); err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{
+		return handleError(c, http.StatusInternalServerError, err)
 			Message: err.Error(),
 		})
 	}
@@ -161,17 +163,18 @@ func (fc *foodItemController) DeleteFoodItem(c echo.Context) error {
 	id := c.Param("id")
 	foodItemId, err := strconv.Atoi(id)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, Response{
+		return handleError(c, http.StatusBadRequest, errors.New("Invalid ID format"))
 			Message: "Invalid ID format",
 		})
 	}
 
 	if err := fc.fu.DeleteFoodItem(uint(foodItemId)); err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{
+		return handleError(c, http.StatusInternalServerError, err)
 			Message: err.Error(),
 		})
 	}
-	return c.JSON(http.StatusOK, Response{
+		return c.JSON(http.StatusOK, Response{
+			Message: "Food item deleted successfully",
 		Message: "Food item deleted successfully",
 	})
 }
