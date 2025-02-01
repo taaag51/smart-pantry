@@ -10,7 +10,6 @@ import (
 	"github.com/taaag51/smart-pantry/backend-api/validator"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/taaag51/smart-pantry/backend-api/validator"
 	"golang.org/x/crypto/bcrypt"
 )
 
