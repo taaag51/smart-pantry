@@ -3,6 +3,7 @@
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
+import React from 'react'
 
 // Mock the environment variables
 process.env.REACT_APP_API_URL = 'http://localhost:8080'
@@ -29,4 +30,71 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: jest.fn(),
     dispatchEvent: jest.fn(),
   })),
+})
+
+// Mock MUI DatePicker
+jest.mock('@mui/x-date-pickers', () => {
+  const React = require('react')
+  return {
+    DatePicker: (props: {
+      label?: string
+      value: Date | null
+      onChange: (date: Date | null) => void
+      slotProps?: {
+        textField?: {
+          'aria-label'?: string
+        }
+      }
+    }) => {
+      return React.createElement('input', {
+        type: 'date',
+        'aria-label': props.slotProps?.textField?.['aria-label'] || props.label,
+        value: props.value ? props.value.toISOString().split('T')[0] : '',
+        onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+          props.onChange(e.target.value ? new Date(e.target.value) : null),
+      })
+    },
+    LocalizationProvider: ({ children }: { children: React.ReactNode }) => children,
+  }
+})
+
+// Mock date-fns locale
+jest.mock('date-fns/locale/ja', () => ({
+  default: {
+    code: 'ja',
+    formatLong: {},
+    formatRelative: {},
+    formatDistance: {},
+    localize: {},
+    match: {},
+    options: {},
+  },
+}))
+
+// Cleanup MSW after each test
+afterEach(() => {
+  if (typeof window !== 'undefined') {
+    // MSWのクリーンアップ
+    const { worker } = require('./mocks/browser')
+    worker?.resetHandlers()
+  }
+})
+
+// エラー処理のグローバル設定
+const originalError = console.error
+beforeAll(() => {
+  console.error = (...args) => {
+    if (
+      /Warning: ReactDOM.render is no longer supported in React 18./.test(
+        args[0]
+      )
+    ) {
+      return
+    }
+    originalError.call(console, ...args)
+  }
+})
+
+afterAll(() => {
+  console.error = originalError
 })

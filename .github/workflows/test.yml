@@ -1,0 +1,124 @@
+name: Test
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: smart_pantry_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Install dependencies
+        run: |
+          cd go-rest-api
+          go mod download
+
+      - name: Run backend tests
+        run: |
+          cd go-rest-api
+          go test -v -coverprofile=coverage.out ./...
+        env:
+          DB_HOST: localhost
+          DB_USER: test_user
+          DB_PASSWORD: test_password
+          DB_NAME: smart_pantry_test
+          JWT_SECRET: test_secret
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-coverage
+          path: go-rest-api/coverage.out
+
+  frontend-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: react-todo/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd react-todo
+          npm ci
+
+      - name: Run frontend tests
+        run: |
+          cd react-todo
+          npm test -- --coverage --watchAll=false
+        env:
+          CI: true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-coverage
+          path: react-todo/coverage/
+
+  coverage-report:
+    needs: [backend-test, frontend-test]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download backend coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: backend-coverage
+          path: coverage/backend
+
+      - name: Download frontend coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: frontend-coverage
+          path: coverage/frontend
+
+      - name: Generate coverage report
+        run: |
+          echo "# テストカバレッジレポート" > coverage-report.md
+          echo "## バックエンド" >> coverage-report.md
+          echo '```' >> coverage-report.md
+          go tool cover -func=coverage/backend/coverage.out >> coverage-report.md
+          echo '```' >> coverage-report.md
+          echo "## フロントエンド" >> coverage-report.md
+          echo '```' >> coverage-report.md
+          cat coverage/frontend/coverage-summary.json >> coverage-report.md
+          echo '```' >> coverage-report.md
+
+      - name: Upload combined coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage-report.md

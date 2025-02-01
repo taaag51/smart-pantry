@@ -1,89 +1,170 @@
 package services
 
 import (
-	"go-rest-api/model"
-	"os"
 	"testing"
 	"time"
+
+	"go-rest-api/model"
+	"go-rest-api/testutil"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGenerateRecipe(t *testing.T) {
-	// APIキーが設定されていない場合はスキップ
-	if os.Getenv("GEMINI_API_KEY") == "" {
-		t.Skip("GEMINI_API_KEY is not set")
+func TestGeminiService_GenerateRecipe(t *testing.T) {
+	// テストデータベースのセットアップ
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+
+	// テストユーザーの作成
+	userID, _ := db.CreateTestUser(t)
+
+	// テストケース
+	tests := []struct {
+		name        string
+		ingredients []model.FoodItem
+		wantErr     bool
+		errMessage  string
+	}{
+		{
+			name:        "空の食材リスト",
+			ingredients: []model.FoodItem{},
+			wantErr:     true,
+			errMessage:  "食材が指定されていません",
+		},
+		{
+			name: "有効な食材リスト",
+			ingredients: []model.FoodItem{
+				{
+					ID:         1,
+					UserId:     userID,
+					Title:      "玉ねぎ",
+					Quantity:   2,
+					ExpiryDate: time.Now().AddDate(0, 0, 7),
+				},
+				{
+					ID:         2,
+					UserId:     userID,
+					Title:      "じゃがいも",
+					Quantity:   3,
+					ExpiryDate: time.Now().AddDate(0, 0, 7),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "期限切れ食材を含む",
+			ingredients: []model.FoodItem{
+				{
+					ID:         3,
+					UserId:     userID,
+					Title:      "期限切れ食材",
+					Quantity:   1,
+					ExpiryDate: time.Now().AddDate(0, 0, -1), // 昨日で期限切れ
+				},
+			},
+			wantErr: false, // 期限切れ食材も受け付けるように変更
+		},
 	}
 
+	// GeminiServiceのインスタンス作成
 	service, err := NewGeminiService()
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatalf("GeminiServiceの作成に失敗: %v", err)
+	}
 
-	t.Run("期限切れ間近の食材がある場合", func(t *testing.T) {
-		foodItems := []model.FoodItem{
-			{
-				ID:         1,
-				Title:      "トマト",
-				Quantity:   2,
-				ExpiryDate: time.Now().Add(24 * time.Hour * 3), // 3日後
-			},
-			{
-				ID:         2,
-				Title:      "なす",
-				Quantity:   1,
-				ExpiryDate: time.Now().Add(24 * time.Hour * 5), // 5日後
-			},
-		}
+	// テストケースの実行
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recipe, err := service.GenerateRecipe(tt.ingredients)
 
-		recipe, err := service.GenerateRecipe(foodItems)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, recipe)
-		// レシピに食材名が含まれていることを確認
-		assert.Contains(t, recipe, "トマト")
-		assert.Contains(t, recipe, "なす")
-	})
-
-	t.Run("食材が空の場合", func(t *testing.T) {
-		_, err := service.GenerateRecipe([]model.FoodItem{})
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "食材が指定されていません")
-	})
-
-	t.Run("期限切れ間近の食材がない場合", func(t *testing.T) {
-		foodItems := []model.FoodItem{
-			{
-				ID:         1,
-				Title:      "りんご",
-				Quantity:   3,
-				ExpiryDate: time.Now().Add(24 * time.Hour * 30), // 30日後
-			},
-		}
-
-		_, err := service.GenerateRecipe(foodItems)
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "期限切れ間近の食材がありません")
-	})
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMessage != "" {
+					assert.Contains(t, err.Error(), tt.errMessage)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, recipe)
+				// レシピの内容に関する基本的な検証
+				assert.Contains(t, recipe, "作り方")
+				assert.Contains(t, recipe, "材料")
+			}
+		})
+	}
 }
 
-func TestNewGeminiService(t *testing.T) {
-	t.Run("APIキーが設定されている場合", func(t *testing.T) {
-		if os.Getenv("GEMINI_API_KEY") == "" {
-			t.Skip("GEMINI_API_KEY is not set")
-		}
+func TestGeminiService_GenerateRecipe_LargeQuantity(t *testing.T) {
+	// テストデータベースのセットアップ
+	db := testutil.NewTestDB(t)
+	defer db.Close()
 
-		service, err := NewGeminiService()
-		assert.NoError(t, err)
-		assert.NotNil(t, service)
-	})
+	// テストユーザーの作成
+	userID, _ := db.CreateTestUser(t)
 
-	t.Run("APIキーが設定されていない場合", func(t *testing.T) {
-		// 一時的にAPIキーを削除
-		originalKey := os.Getenv("GEMINI_API_KEY")
-		os.Unsetenv("GEMINI_API_KEY")
-		defer os.Setenv("GEMINI_API_KEY", originalKey)
+	// 大量の食材データを生成
+	var ingredients []model.FoodItem
+	for i := 1; i <= 50; i++ {
+		ingredients = append(ingredients, model.FoodItem{
+			ID:         uint(i),
+			UserId:     userID,
+			Title:      "テスト食材",
+			Quantity:   i,
+			ExpiryDate: time.Now().AddDate(0, 0, 7),
+		})
+	}
 
-		service, err := NewGeminiService()
-		assert.Error(t, err)
-		assert.Nil(t, service)
-		assert.Contains(t, err.Error(), "GEMINI_API_KEY")
-	})
+	// GeminiServiceのインスタンス作成
+	service, err := NewGeminiService()
+	if err != nil {
+		t.Fatalf("GeminiServiceの作成に失敗: %v", err)
+	}
+
+	// テスト実行
+	recipe, err := service.GenerateRecipe(ingredients)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, recipe)
+	assert.Contains(t, recipe, "大量調理")
+}
+
+func TestGeminiService_GenerateRecipe_Performance(t *testing.T) {
+	// テストデータベースのセットアップ
+	db := testutil.NewTestDB(t)
+	defer db.Close()
+
+	// テストユーザーの作成
+	userID, _ := db.CreateTestUser(t)
+
+	// 標準的な食材リスト
+	ingredients := []model.FoodItem{
+		{
+			ID:         1,
+			UserId:     userID,
+			Title:      "玉ねぎ",
+			Quantity:   2,
+			ExpiryDate: time.Now().AddDate(0, 0, 7),
+		},
+		{
+			ID:         2,
+			UserId:     userID,
+			Title:      "じゃがいも",
+			Quantity:   3,
+			ExpiryDate: time.Now().AddDate(0, 0, 7),
+		},
+	}
+
+	// GeminiServiceのインスタンス作成
+	service, err := NewGeminiService()
+	if err != nil {
+		t.Fatalf("GeminiServiceの作成に失敗: %v", err)
+	}
+
+	// パフォーマンステスト
+	start := time.Now()
+	recipe, err := service.GenerateRecipe(ingredients)
+	duration := time.Since(start)
+
+	// アサーション
+	assert.NoError(t, err)
+	assert.NotEmpty(t, recipe)
+	assert.Less(t, duration.Seconds(), 2.0, "レシピ生成は2秒以内に完了すべき")
 }

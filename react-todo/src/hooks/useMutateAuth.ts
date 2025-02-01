@@ -64,8 +64,9 @@ export const useMutateAuth = () => {
       },
       onSuccess: () => {
         window.dispatchEvent(new CustomEvent('logout-success'))
+        localStorage.removeItem('accessToken')
         resetEditedTask()
-        navigate('/', { replace: true })
+        navigate('/login', { replace: true })
       },
       onError: (err: AxiosError<ApiError>) => {
         if (err.response?.data.message) {
