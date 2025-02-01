@@ -82,13 +82,14 @@ jobs:
 
       - name: Upload test artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cypress-artifacts
           path: |
             cypress/videos
             cypress/screenshots
           retention-days: 7
+          compression-level: 6 # 追加: 圧縮レベルの指定（0-9）
 
       - name: Create GitHub Issue on failure
         if: failure()
