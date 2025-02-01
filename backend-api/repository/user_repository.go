@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"backend-api/model"
+	"github.com/taaag51/smart-pantry/backend-api/model"
 
 	"gorm.io/gorm"
 )

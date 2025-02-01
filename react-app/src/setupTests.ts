@@ -2,6 +2,17 @@
 // allows you to do things like:
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
+
+// TextEncoder/TextDecoder polyfill for Node environment
+if (
+  typeof global.TextEncoder === 'undefined' ||
+  typeof global.TextDecoder === 'undefined'
+) {
+  const util = require('util')
+  global.TextEncoder = util.TextEncoder
+  global.TextDecoder = util.TextDecoder
+}
+
 import '@testing-library/jest-dom'
 import React from 'react'
 import { server } from './mocks/server'
