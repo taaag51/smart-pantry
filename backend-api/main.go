@@ -1,14 +1,15 @@
 package main
 
 import (
-	"backend-api/controller"
-	"backend-api/db"
-	"backend-api/repository"
-	"backend-api/router"
-	"backend-api/services"
-	"backend-api/usecase"
-	"backend-api/validator"
 	"log"
+
+	"github.com/taaag51/smart-pantry/backend-api/controller"
+	"github.com/taaag51/smart-pantry/backend-api/db"
+	"github.com/taaag51/smart-pantry/backend-api/repository"
+	"github.com/taaag51/smart-pantry/backend-api/router"
+	"github.com/taaag51/smart-pantry/backend-api/services"
+	"github.com/taaag51/smart-pantry/backend-api/usecase"
+	"github.com/taaag51/smart-pantry/backend-api/validator"
 )
 
 func main() {

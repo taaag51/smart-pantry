@@ -5,12 +5,14 @@ This package defines the IUserController interface and implements user-related H
 package controller
 
 import (
-	"backend-api/controller/response"
-	"backend-api/errors"
-	"backend-api/model"
-	"backend-api/usecase"
 	"net/http"
 	"time"
+
+	"github.com/taaag51/smart-pantry/backend-api/model"
+	"github.com/taaag51/smart-pantry/backend-api/usecase"
+
+	"github.com/taaag51/smart-pantry/backend-api/controller/response"
+	"github.com/taaag51/smart-pantry/backend-api/errors"
 
 	"github.com/labstack/echo/v4"
 )

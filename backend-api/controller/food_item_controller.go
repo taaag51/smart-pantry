@@ -1,13 +1,14 @@
 package controller
 
 import (
-	"backend-api/model"
-	"backend-api/usecase"
 	"net/http"
 	"strconv"
 
+	"github.com/taaag51/smart-pantry/backend-api/usecase"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"github.com/taaag51/smart-pantry/backend-api/model"
 )
 
 /**
