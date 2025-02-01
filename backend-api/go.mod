@@ -1,4 +1,4 @@
-module backend-api
+module github.com/taaag51/smart-pantry/backend-api
 
 go 1.23.4
 

@@ -4,6 +4,7 @@ import (
 	"backend-api/model"
 	"backend-api/repository"
 	"backend-api/services"
+	"errors"
 	"fmt"
 )
 
@@ -27,9 +28,9 @@ func (ru *recipeUsecase) GetRecipeSuggestions(userId uint) (string, error) {
 		return "", fmt.Errorf("食材の取得に失敗しました: %v", err)
 	}
 
-	// 食材が存在しない場合は適切なメッセージを返す
+	// 食材が存在しない場合はエラーを返す
 	if len(foodItems) == 0 {
-		return "食材が登録されていません。食材を追加してからレシピを取得してください。", nil
+		return "", errors.New("食材が登録されていません。食材を追加してからレシピを取得してください")
 	}
 
 	// レシピを生成
