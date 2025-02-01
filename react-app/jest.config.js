@@ -2,13 +2,18 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
   transform: {
-    '^.+\\.tsx?$': 'ts-jest',
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        tsconfig: 'tsconfig.json',
+      },
+    ],
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    '^axios$': '<rootDir>/src/__mocks__/axios.ts',
   },
-  transformIgnorePatterns: [
-    '/node_modules/(?!axios)', // axiosをトランスパイル対象に追加
-  ],
   setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts'],
+  testPathIgnorePatterns: ['/node_modules/'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
 }

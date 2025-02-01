@@ -11,7 +11,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func NewRouter(tc controller.ITaskController, uc controller.IUserController, fc controller.IFoodItemController, rc controller.IRecipeController) *echo.Echo {
+func NewRouter(uc controller.IUserController, fc controller.IFoodItemController, rc controller.IRecipeController) *echo.Echo {
 	e := echo.New()
 
 	// CORSミドルウェアの設定を修正
@@ -48,14 +48,6 @@ func NewRouter(tc controller.ITaskController, uc controller.IUserController, fc 
 
 	// トークン検証エンドポイント
 	api.GET("/verify-token", uc.VerifyToken)
-
-	// タスク関連
-	tasks := api.Group("/tasks")
-	tasks.GET("", tc.GetAllTasks)
-	tasks.GET("/:taskId", tc.GetTaskById)
-	tasks.POST("", tc.CreateTask)
-	tasks.PUT("/:taskId", tc.UpdateTask)
-	tasks.DELETE("/:taskId", tc.DeleteTask)
 
 	// 食材関連
 	foodItems := api.Group("/food-items")
