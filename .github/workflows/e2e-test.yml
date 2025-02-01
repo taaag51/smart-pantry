@@ -1,0 +1,119 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 */6 * * *" # 6時間ごとに実行
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: smartpantry_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd react-app && npm ci
+          cd ../backend-api && go mod download
+
+      - name: Start backend server
+        run: |
+          cd backend-api
+          go run main.go &
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: smartpantry_test
+
+      - name: Start frontend server
+        run: |
+          cd react-app
+          npm start &
+        env:
+          REACT_APP_API_URL: http://localhost:8080
+
+      - name: Wait for servers
+        run: |
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8080/health
+          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000
+
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          browser: chrome
+          headed: false
+          record: false
+        env:
+          CYPRESS_BASE_URL: http://localhost:3000
+          CYPRESS_API_URL: http://localhost:8080
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: cypress-artifacts
+          path: |
+            cypress/videos
+            cypress/screenshots
+          retention-days: 7
+
+      - name: Create GitHub Issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueBody = `
+            # E2Eテスト失敗報告
+
+            ## 実行情報
+            - ブランチ: ${process.env.GITHUB_REF}
+            - コミット: ${process.env.GITHUB_SHA}
+            - 実行時刻: ${new Date().toISOString()}
+
+            ## テスト結果
+            テスト実行に失敗しました。詳細は以下のリンクから確認できます：
+
+            - [実行ログ](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})
+            - [テスト成果物](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}/artifacts)
+            `;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 E2Eテスト失敗の通知',
+              body: issueBody,
+              labels: ['bug', 'e2e-test-failure']
+            });
