@@ -2,7 +2,7 @@
 package response
 
 import (
-	"go-rest-api/errors"
+	"backend-api/errors"
 	"net/http"
 	"time"
 

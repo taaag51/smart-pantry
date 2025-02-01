@@ -1,7 +1,7 @@
 package validator
 
 import (
-	"go-rest-api/model"
+	"backend-api/model"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"

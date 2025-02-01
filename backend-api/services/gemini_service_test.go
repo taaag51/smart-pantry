@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"go-rest-api/model"
-	"go-rest-api/testutil"
+	"backend-api/model"
+	"backend-api/testutil"
 
 	"github.com/stretchr/testify/assert"
 )

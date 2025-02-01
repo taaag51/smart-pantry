@@ -5,7 +5,7 @@
 ### バックエンド (Go)
 
 ```
-go-rest-api/
+backend-api/
 ├── controller/      # HTTPリクエストハンドリング
 ├── usecase/        # ビジネスロジック
 ├── repository/     # データアクセス層

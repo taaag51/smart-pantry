@@ -58,7 +58,7 @@ GEMINI_API_KEY=your-gemini-api-key
 PostgreSQL を Docker で起動：
 
 ```bash
-cd go-rest-api
+cd backend-api
 docker-compose up -d
 ```
 
@@ -71,7 +71,7 @@ go run migrate/migrate.go
 ### 4. バックエンドの起動
 
 ```bash
-cd go-rest-api
+cd backend-api
 go mod download
 go run main.go
 ```
@@ -155,7 +155,7 @@ CREATE TABLE users (
 
 ```bash
 # バックエンドのテスト
-cd go-rest-api
+cd backend-api
 go test ./...
 
 # フロントエンドのテスト

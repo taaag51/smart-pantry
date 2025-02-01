@@ -1,10 +1,10 @@
 package controller
 
 import (
+	"backend-api/mock"
+	"backend-api/model"
 	"encoding/json"
 	"errors"
-	"go-rest-api/mock"
-	"go-rest-api/model"
 	"net/http"
 	"net/http/httptest"
 	"strings"

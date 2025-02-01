@@ -1,10 +1,10 @@
 package usecase
 
 import (
+	"backend-api/model"
+	"backend-api/repository"
+	"backend-api/services"
 	"fmt"
-	"go-rest-api/model"
-	"go-rest-api/repository"
-	"go-rest-api/services"
 )
 
 type IRecipeUsecase interface {

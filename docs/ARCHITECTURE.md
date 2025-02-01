@@ -1,137 +1,213 @@
-# スマートパントリーアプリケーション アーキテクチャ設計
+# スマートパントリーシステム - アーキテクチャ設計
 
-## 概要
+## システム構成図
 
-このアプリケーションは、食材管理を効率化するための Web アプリケーションです。
-フロントエンドは React、バックエンドは Go 言語で実装されています。
+```mermaid
+graph TB
+    subgraph "フロントエンド (React)"
+        UI[UI Components]
+        Hooks[Custom Hooks]
+        Store[State Management]
+    end
 
-## アーキテクチャの特徴
+    subgraph "バックエンド (Go)"
+        Router[Router]
+        Controller[Controllers]
+        Usecase[Usecases]
+        Repository[Repositories]
+        DB[(Database)]
+    end
 
-### フロントエンド（React + TypeScript）
+    UI --> Hooks
+    Hooks --> Store
+    Store --> |HTTP Requests| Router
+    Router --> Controller
+    Controller --> Usecase
+    Usecase --> Repository
+    Repository --> DB
+```
 
-#### コンポーネント設計
+## リクエストフロー
 
-1. **プレゼンテーショナルコンポーネント**
+```mermaid
+sequenceDiagram
+    participant Browser as ブラウザ
+    participant React as Reactアプリ
+    participant Router as Echoルーター
+    participant Controller as コントローラー
+    participant Usecase as ユースケース
+    participant Repository as リポジトリ
+    participant DB as データベース
 
-   - UI の表示に特化
-   - ビジネスロジックを含まない
-   - 例：`FoodItemForm.tsx`
+    Browser->>React: ユーザーアクション
+    React->>Router: HTTPリクエスト
+    Note over React,Router: JWT認証
+    Router->>Controller: ルーティング
+    Controller->>Usecase: ビジネスロジック実行
+    Usecase->>Repository: データアクセス
+    Repository->>DB: クエリ実行
+    DB-->>Repository: データ
+    Repository-->>Usecase: データ
+    Usecase-->>Controller: 処理結果
+    Controller-->>Router: レスポンス
+    Router-->>React: HTTPレスポンス
+    React-->>Browser: UI更新
+```
 
-2. **カスタムフック**
-   - ビジネスロジックの分離
-   - 再利用可能な状態管理
-   - 例：`useFoodItemForm.ts`, `useMutateFoodItem.ts`
+## レイヤー構造
 
-#### 状態管理
+### 1. プレゼンテーション層 (React)
 
-- React Query による効率的なサーバー状態管理
-- ローカル状態は React の useState を使用
-- キャッシュの最適化
+```mermaid
+classDiagram
+    class UIComponents {
+        +FoodItem
+        +FoodItemForm
+        +RecipeSuggestions
+        +Auth
+    }
 
-### バックエンド（Go + Echo）
+    class CustomHooks {
+        +useFoodItemForm()
+        +useAuth()
+        +useMutateFoodItem()
+    }
 
-#### レイヤードアーキテクチャ
+    class StateManagement {
+        +Store
+        +Actions
+        +Mutations
+    }
 
-1. **コントローラー層**
+    UIComponents --> CustomHooks
+    CustomHooks --> StateManagement
+```
 
-   - HTTP リクエストのハンドリング
-   - バリデーション
-   - レスポンス形式の統一
+### 2. アプリケーション層 (Go)
 
-   ```go
-   type Response struct {
-       Data    interface{} `json:"data"`
-       Message string      `json:"message,omitempty"`
-   }
-   ```
+```mermaid
+classDiagram
+    class Controllers {
+        +FoodItemController
+        +RecipeController
+        +UserController
+    }
 
-2. **ユースケース層**
+    class Usecases {
+        +FoodItemUsecase
+        +RecipeUsecase
+        +UserUsecase
+    }
 
-   - ビジネスロジックの実装
-   - トランザクション管理
+    class Repositories {
+        +FoodItemRepository
+        +UserRepository
+    }
 
-3. **リポジトリ層**
-   - データベースアクセス
-   - データの永続化
+    Controllers --> Usecases
+    Usecases --> Repositories
+```
 
-## データフロー
+## セキュリティ設計
 
-### 食材追加の例
+### 認証フロー
 
-1. ユーザーが食材フォームに入力
-2. `FoodItemForm` コンポーネントが入力を受け取る
-3. `useFoodItemForm` フックがバリデーションを実行
-4. `useMutateFoodItem` フックが API リクエストを送信
-5. バックエンドの `FoodItemController` がリクエストを受信
-6. ユースケース層でビジネスロジックを実行
-7. データベースに保存
-8. レスポンスをフロントエンドに返却
-9. React Query がキャッシュを更新
-10. UI が自動的に更新
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Auth
+    participant JWT
+    participant API
 
-## エラーハンドリング
+    Client->>Auth: ログインリクエスト
+    Auth->>JWT: トークン生成
+    JWT-->>Auth: JWTトークン
+    Auth-->>Client: トークン返却
+    Client->>API: APIリクエスト + JWT
+    Note over API: トークン検証
+    API-->>Client: レスポンス
+```
 
-### フロントエンド
+## データモデル
 
-- カスタムフックによる一元化されたエラー処理
-- ユーザーフレンドリーなエラーメッセージ
-- フォームバリデーション
+### エンティティ関係図
 
-### バックエンド
+```mermaid
+erDiagram
+    User ||--o{ FoodItem : "所有"
+    FoodItem ||--o{ Recipe : "使用"
+    User {
+        uint id
+        string email
+        string password
+    }
+    FoodItem {
+        uint id
+        string title
+        int quantity
+        date expiry_date
+        uint user_id
+    }
+    Recipe {
+        uint id
+        string title
+        text description
+        uint user_id
+    }
+```
 
-- 統一されたエラーレスポンス形式
-- 適切な HTTP ステータスコードの使用
-- 詳細なエラーメッセージ
+## エラーハンドリング設計
 
-## セキュリティ
+```mermaid
+flowchart TD
+    A[クライアントエラー] --> B{エラー種別}
+    B -->|バリデーションエラー| C[400 Bad Request]
+    B -->|認証エラー| D[401 Unauthorized]
+    B -->|権限エラー| E[403 Forbidden]
+    B -->|未検出エラー| F[500 Internal Server Error]
 
-- JWT による認証
-- CSRF トークンの使用
-- 入力値のバリデーション
-- SQL インジェクション対策
+    C --> G[エラーレスポンス]
+    D --> G
+    E --> G
+    F --> G
+```
 
-## パフォーマンス最適化
+## 開発環境構成
 
-### フロントエンド
+```mermaid
+graph LR
+    A[開発環境] --> B[フロントエンド]
+    A --> C[バックエンド]
+    B --> D[Node.js]
+    B --> E[React]
+    B --> F[TypeScript]
+    C --> G[Go]
+    C --> H[PostgreSQL]
+    C --> I[Docker]
+```
 
-- React Query によるキャッシュ管理
-- 必要最小限のレンダリング
-- コンポーネントの適切な分割
+## テスト戦略
 
-### バックエンド
+```mermaid
+graph TD
+    A[テスト戦略] --> B[ユニットテスト]
+    A --> C[統合テスト]
+    A --> D[E2Eテスト]
 
-- データベースクエリの最適化
-- キャッシュの活用
-- 効率的なルーティング
+    B --> E[Go testing]
+    B --> F[React Testing Library]
+    C --> G[API テスト]
+    D --> H[Cypress]
+```
 
-## 開発ガイドライン
+## デプロイメントフロー
 
-1. **コンポーネント作成**
-
-   - 単一責任の原則に従う
-   - プレゼンテーショナルとコンテナの分離
-   - 適切なコメント付与
-
-2. **カスタムフック作成**
-
-   - ロジックの再利用性を重視
-   - 明確な命名規則
-   - 型定義の徹底
-
-3. **API エンドポイント作成**
-
-   - RESTful 原則に従う
-   - 統一されたレスポンス形式
-   - 適切なエラーハンドリング
-
-4. **テスト**
-   - ユニットテストの作成
-   - インテグレーションテスト
-   - E2E テスト
-
-## 今後の改善点
-
-1. キャッシュ戦略の最適化
-2. パフォーマンスモニタリングの導入
-3. エラーログの集中管理
-4. CI/CD パイプラインの強化
+```mermaid
+graph LR
+    A[Git Push] --> B[GitHub Actions]
+    B --> C[テスト実行]
+    C --> D{テスト結果}
+    D -->|成功| E[ビルド]
+    D -->|失敗| F[通知]
+    E --> G[デプロイ]
+```

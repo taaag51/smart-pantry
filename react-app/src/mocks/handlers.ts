@@ -1,6 +1,29 @@
 import { http, HttpResponse } from 'msw'
 
 export const handlers = [
+  // 認証関連のエンドポイント
+  http.post('/login', async () => {
+    return HttpResponse.json(
+      {
+        message: 'ログインに成功しました',
+        user: {
+          id: 1,
+          email: 'test@example.com',
+          name: 'テストユーザー',
+        },
+      },
+      { status: 200 }
+    )
+  }),
+
+  http.post('/logout', () => {
+    return HttpResponse.json({ message: 'ログアウトしました' }, { status: 200 })
+  }),
+
+  http.get('/csrf', () => {
+    return HttpResponse.json({ csrf_token: 'test-csrf-token' }, { status: 200 })
+  }),
+
   // 食材追加のエンドポイント
   http.post('/api/food-items', async () => {
     return HttpResponse.json(

@@ -1,10 +1,10 @@
 package usecase
 
 import (
+	"backend-api/model"
+	"backend-api/repository"
+	"backend-api/validator"
 	"errors"
-	"go-rest-api/model"
-	"go-rest-api/repository"
-	"go-rest-api/validator"
 	"os"
 	"time"
 
