@@ -1,4 +1,7 @@
-// Package controller handles HTTP request processing and response generation
+/*
+Package controller handles HTTP request processing and response generation.
+This package defines the IUserController interface and implements user-related HTTP request handling.
+*/
 package controller
 
 import (
@@ -12,17 +15,38 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// IUserController defines the interface for user-related HTTP request handling
+/*
+IUserController defines the interface for user-related HTTP request handling.
+It includes methods for user registration, authentication, session management, and CSRF token handling.
+*/
 type IUserController interface {
-	// SignUp handles user registration
+	/*
+		SignUp handles user registration.
+		It binds user data from the request, validates it, and calls the use case to create a new user.
+		Returns a success response or an error if the registration fails.
+	*/
 	SignUp(c echo.Context) error
-	// LogIn authenticates a user and creates a session
+	/*
+		LogIn authenticates a user and creates a session.
+		It binds user data from the request, validates it, and calls the use case to log in the user.
+		On success, it sets an authentication cookie and returns a success response.
+	*/
 	LogIn(c echo.Context) error
-	// LogOut terminates the current user session
+	/*
+		LogOut terminates the current user session.
+		It clears the authentication cookie and returns a success response.
+	*/
 	LogOut(c echo.Context) error
-	// CsrfToken provides a CSRF token for form submission
+	/*
+		CsrfToken provides a CSRF token for form submission.
+		It retrieves the CSRF token from the context and returns a success response.
+	*/
 	CsrfToken(c echo.Context) error
-	// VerifyToken validates the current session token
+	/*
+		VerifyToken validates the current session token.
+		This method is called after the JWT middleware has already validated the token.
+		It returns a success response indicating the token is valid.
+	*/
 	VerifyToken(c echo.Context) error
 }
 
@@ -64,16 +88,16 @@ func (uc *userController) SignUp(c echo.Context) error {
 	// Bind and validate user data
 	user, err := bindUser(c)
 	if err != nil {
-		return response.Error(c, err)
+		return handleError(c, http.StatusInternalServerError, "ユーザーの登録に失敗しました")
 	}
 
 	// Call signup usecase
-	userRes, err := uc.uu.SignUp(user)
+	_, err = uc.uu.SignUp(user)
 	if err != nil {
-		return response.Error(c, err)
+		return handleError(c, http.StatusInternalServerError, "ユーザーの登録に失敗しました")
 	}
 
-	return response.Success(c, http.StatusCreated, userRes, "ユーザーが正常に作成されました")
+	return handleError(c, http.StatusCreated, "ユーザーが正常に作成されました")
 }
 
 // LogIn godoc
@@ -90,13 +114,19 @@ func (uc *userController) LogIn(c echo.Context) error {
 	// Bind and validate user data
 	user, err := bindUser(c)
 	if err != nil {
-		return response.Error(c, err)
+		return handleError(c, http.StatusBadRequest, "リクエストの形式が不正です")
 	}
 
 	// Authenticate user and get token
 	tokenString, err := uc.uu.Login(user)
 	if err != nil {
-		return response.Error(c, err)
+		return handleError(c, http.StatusUnauthorized, "ログインに失敗しました")
+	}
+	if err != nil {
+		return handleError(c, http.StatusUnauthorized, "ログインに失敗しました")
+	}
+	if err != nil {
+		return handleError(c, http.StatusUnauthorized, "ログインに失敗しました")
 	}
 
 	// Set authentication cookie
@@ -105,7 +135,7 @@ func (uc *userController) LogIn(c echo.Context) error {
 		time.Now().Add(24*time.Hour),
 	))
 
-	return response.Success(c, http.StatusOK, nil, "ログインに成功しました")
+	return handleError(c, http.StatusOK, "ログインに成功しました")
 }
 
 // LogOut godoc
@@ -119,7 +149,7 @@ func (uc *userController) LogOut(c echo.Context) error {
 	// Clear authentication cookie
 	response.SetCookie(c, response.ClearAuthCookie())
 
-	return response.Success(c, http.StatusOK, nil, "ログアウトしました")
+	return handleError(c, http.StatusOK, "ログアウトしました")
 }
 
 // CsrfToken godoc
@@ -130,8 +160,8 @@ func (uc *userController) LogOut(c echo.Context) error {
 // @Success 200 {object} response.SuccessResponse
 // @Router /csrf [get]
 func (uc *userController) CsrfToken(c echo.Context) error {
-	token := c.Get("csrf").(string)
-	return response.Success(c, http.StatusOK, map[string]string{"csrf_token": token}, "")
+	_ = c.Get("csrf").(string)
+	return handleError(c, http.StatusOK, "CSRFトークンを取得しました")
 }
 
 // VerifyToken godoc
@@ -146,5 +176,5 @@ func (uc *userController) CsrfToken(c echo.Context) error {
 func (uc *userController) VerifyToken(c echo.Context) error {
 	// JWTミドルウェアによって既に検証されているため、
 	// このエンドポイントに到達できた時点で有効なトークン
-	return response.Success(c, http.StatusOK, nil, "トークンは有効です")
+	return handleError(c, http.StatusOK, "トークンは有効です")
 }

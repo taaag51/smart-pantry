@@ -28,9 +28,7 @@ func (rc *recipeController) GetRecipeSuggestions(c echo.Context) error {
 	// レシピ提案を取得
 	suggestions, err := rc.ru.GetRecipeSuggestions(userId)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "レシピの提案に失敗しました",
-		})
+		return handleError(c, http.StatusInternalServerError, "レシピの提案に失敗しました")
 	}
 
 	return c.JSON(http.StatusOK, []string{suggestions})
