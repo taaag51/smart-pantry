@@ -2,8 +2,8 @@
 package controller
 
 import (
-	"go-rest-api/controller/response"
-	"go-rest-api/errors"
+	"backend-api/controller/response"
+	"backend-api/errors"
 	"go-rest-api/model"
 	"go-rest-api/usecase"
 	"net/http"
