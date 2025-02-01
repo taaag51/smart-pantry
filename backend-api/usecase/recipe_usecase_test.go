@@ -1,9 +1,10 @@
 package usecase
 
 import (
-	"backend-api/model"
 	"testing"
 	"time"
+
+	"github.com/taaag51/smart-pantry/backend-api/model"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"

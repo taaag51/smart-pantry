@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"backend-api/mock"
-	"backend-api/model"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -10,6 +8,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/taaag51/smart-pantry/backend-api/mock"
+	"github.com/taaag51/smart-pantry/backend-api/model"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/golang/mock/gomock"

@@ -1,15 +1,16 @@
 package controller
 
 import (
-	"backend-api/controller/response"
-	"backend-api/errors"
-	"backend-api/model"
 	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/taaag51/smart-pantry/backend-api/controller/response"
+	"github.com/taaag51/smart-pantry/backend-api/errors"
+	"github.com/taaag51/smart-pantry/backend-api/model"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"

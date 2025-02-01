@@ -1,6 +1,6 @@
 module github.com/taaag51/smart-pantry/backend-api
 
-go 1.23.4
+go 1.21
 
 require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
@@ -10,7 +10,6 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo-jwt/v4 v4.3.0
 	github.com/labstack/echo/v4 v4.13.3
-	github.com/lib/pq v1.10.9
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.32.0
 	google.golang.org/api v0.218.0
