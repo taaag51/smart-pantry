@@ -51,8 +51,14 @@ export const Navigation: FC = () => {
           </Button>
           <Button
             color="inherit"
-            onClick={() => {
-              logoutMutation.mutate() // ログアウト処理を呼び出す
+            onClick={async () => {
+              console.log('ログアウトボタンがクリックされました')
+              try {
+                await logoutMutation.mutateAsync()
+                console.log('ログアウト処理が完了しました')
+              } catch (error) {
+                console.error('ログアウト処理でエラーが発生しました:', error)
+              }
             }}
           >
             ログアウト

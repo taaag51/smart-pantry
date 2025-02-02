@@ -71,21 +71,21 @@ export const useMutateAuth = () => {
   const logoutMutation = useMutation<AxiosResponse, AxiosError<ApiError>, void>(
     {
       mutationFn: async () => {
-        await getCsrfToken()
-        return await axiosInstance.post('/logout')
+        const result = await axiosInstance.post('/logout')
+        return result
       },
       onSuccess: () => {
-        window.dispatchEvent(new CustomEvent('logout-success'))
         localStorage.removeItem('accessToken')
+        window.dispatchEvent(new CustomEvent('logout-success'))
         resetEditedTask()
         navigate('/login', { replace: true })
       },
       onError: (err: AxiosError<ApiError>) => {
-        if (err.response?.data.message) {
-          switchErrorHandling(err.response.data.message)
-        } else {
-          switchErrorHandling('ログアウトに失敗しました')
-        }
+        console.error('Logout error:', err)
+        // エラーが発生しても、ローカルのクリーンアップは実行
+        localStorage.removeItem('accessToken')
+        resetEditedTask()
+        navigate('/login', { replace: true })
       },
     }
   )
