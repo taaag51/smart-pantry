@@ -14,7 +14,7 @@ import {
   Button,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
+  // Dashboard as DashboardIcon,
   Kitchen as KitchenIcon,
   Restaurant as RestaurantIcon,
   Inventory as InventoryIcon,
@@ -38,12 +38,12 @@ export const Layout: FC<Props> = ({ children }) => {
   }
 
   const menuItems = [
-    {
-      text: 'ダッシュボード',
-      path: '/dashboard',
-      icon: <DashboardIcon />,
-      requiresAuth: true,
-    },
+    // {
+    //   text: 'ダッシュボード',
+    //   path: '/dashboard',
+    //   icon: <DashboardIcon />,
+    //   requiresAuth: true,
+    // },
     {
       text: 'パントリー管理',
       path: '/pantry',
