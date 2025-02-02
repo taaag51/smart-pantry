@@ -18,11 +18,8 @@ axiosInstance.interceptors.request.use(
       config.headers['X-CSRF-Token'] = csrfToken
     }
 
-    // JWTトークンがある場合は設定
-    const token = localStorage.getItem('accessToken')
-    if (token && config.url !== '/csrf') {
-      config.headers['Authorization'] = `Bearer ${token}`
-    }
+    // CSRFエンドポイントでない場合は、Cookieに含まれるトークンを使用
+    // Cookieは withCredentials: true で自動的に送信される
 
     return config
   },
@@ -60,7 +57,6 @@ axiosInstance.interceptors.response.use(
         originalRequest._retryCount >= 1 ||
         originalRequest.url === '/refresh-token'
       ) {
-        localStorage.removeItem('accessToken')
         window.dispatchEvent(
           new CustomEvent('unauthorized', {
             detail: 'セッションが期限切れです。再度ログインしてください。',
@@ -77,20 +73,14 @@ axiosInstance.interceptors.response.use(
         const { data } = response.data
 
         if (data && data.accessToken) {
-          localStorage.setItem('accessToken', data.accessToken)
-          axiosInstance.defaults.headers.common[
-            'Authorization'
-          ] = `Bearer ${data.accessToken}`
-          originalRequest.headers[
-            'Authorization'
-          ] = `Bearer ${data.accessToken}`
+          // アクセストークンはCookieで自動的に設定されるため、
+          // 元のリクエストを再試行するだけでよい
           return axiosInstance(originalRequest)
         } else {
           throw new Error('新しいアクセストークンの取得に失敗しました')
         }
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError)
-        localStorage.removeItem('accessToken')
         window.dispatchEvent(
           new CustomEvent('unauthorized', {
             detail: 'トークンの更新に失敗しました。再度ログインしてください。',

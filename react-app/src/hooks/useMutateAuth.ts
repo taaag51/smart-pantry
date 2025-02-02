@@ -13,7 +13,11 @@ interface ApiError {
 interface LoginResponse {
   message: string
   data: {
-    token: string
+    accessToken: string
+    tokenType: string
+    expiresIn: number
+    expiresAt: string
+    refreshToken: string
   }
 }
 
@@ -45,16 +49,12 @@ export const useMutateAuth = () => {
       }
     },
     onSuccess: async (res) => {
-      const token = res.data.data.token
-      if (token) {
-        localStorage.setItem('accessToken', token)
+      const { accessToken } = res.data.data
+      if (accessToken) {
         // 認証状態を更新
         window.dispatchEvent(new CustomEvent('login-success'))
-        // トークンの設定とイベントの反映を待つ
+        // イベントの反映を待つ
         await new Promise((resolve) => setTimeout(resolve, 100))
-        axiosInstance.defaults.headers.common[
-          'Authorization'
-        ] = `Bearer ${token}`
         navigate('/pantry', { replace: true })
       } else {
         console.error('No token in login response')
@@ -132,7 +132,6 @@ export const useMutateAuth = () => {
         }
       },
       onSuccess: async () => {
-        localStorage.removeItem('accessToken')
         resetEditedTask()
         window.dispatchEvent(new CustomEvent('logout-success'))
         // 状態の更新が反映されるのを待ってからナビゲーション
@@ -142,7 +141,6 @@ export const useMutateAuth = () => {
       onError: async (err: AxiosError<ApiError>) => {
         console.error('Logout error:', err)
         // エラーが発生しても、ローカルのクリーンアップは実行
-        localStorage.removeItem('accessToken')
         resetEditedTask()
         window.dispatchEvent(new CustomEvent('logout-success'))
         // 状態の更新が反映されるのを待ってからナビゲーション
