@@ -122,13 +122,7 @@ func (uc *userController) LogIn(c echo.Context) error {
 	// Authenticate user and get token
 	tokenString, err := uc.uu.Login(user)
 	if err != nil {
-		return handleError(c, http.StatusUnauthorized, "ログインに失敗しました")
-	}
-	if err != nil {
-		return handleError(c, http.StatusUnauthorized, "ログインに失敗しました")
-	}
-	if err != nil {
-		return handleError(c, http.StatusUnauthorized, "ログインに失敗しました")
+		return handleError(c, http.StatusUnauthorized, "メールアドレスまたはパスワードが正しくありません")
 	}
 
 	// Set authentication cookie
@@ -162,8 +156,11 @@ func (uc *userController) LogOut(c echo.Context) error {
 // @Success 200 {object} response.SuccessResponse
 // @Router /csrf [get]
 func (uc *userController) CsrfToken(c echo.Context) error {
-	_ = c.Get("csrf").(string)
-	return handleError(c, http.StatusOK, "CSRFトークンを取得しました")
+	token := c.Get("csrf").(string)
+	return c.JSON(http.StatusOK, map[string]string{
+		"csrf_token": token,
+		"message":    "CSRFトークンを取得しました",
+	})
 }
 
 // VerifyToken godoc

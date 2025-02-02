@@ -18,8 +18,8 @@ func NewRouter(uc controller.IUserController, fc controller.IFoodItemController,
 	// CORSミドルウェアの設定を修正
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:     []string{"http://localhost:3000"},
-		AllowMethods:     []string{"*"},
-		AllowHeaders:     []string{"*"},
+		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token"},
 		AllowCredentials: true,
 		MaxAge:           86400,
 	}))

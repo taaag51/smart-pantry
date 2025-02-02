@@ -1,6 +1,8 @@
 module github.com/taaag51/smart-pantry/backend-api
 
-go 1.21
+go 1.22
+
+toolchain go1.23.5
 
 require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
