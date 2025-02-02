@@ -3,6 +3,7 @@ import { useQueryFoodItems } from '../hooks/useQueryFoodItems'
 import { useMutateFoodItem } from '../hooks/useMutateFoodItem'
 import { FoodItem as FoodItemComponent } from './FoodItem'
 import { FoodItem } from '../types'
+import { Typography } from '@mui/material'
 
 export const FoodList: FC = () => {
   const [title, setTitle] = useState('')
@@ -27,6 +28,28 @@ export const FoodList: FC = () => {
 
   return (
     <div className="p-6">
+      {/* ページタイトル */}
+      <Typography
+        variant="h5"
+        sx={{
+          mb: 4,
+          fontWeight: 600,
+          color: '#1a1a1a',
+          position: 'relative',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: -8,
+            left: 0,
+            width: 40,
+            height: 3,
+            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+            borderRadius: '2px',
+          },
+        }}
+      >
+        食材管理
+      </Typography>
       <form onSubmit={handleSubmit} className="mb-6 space-y-4">
         <div>
           <label
