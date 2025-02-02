@@ -16,6 +16,7 @@ import (
 type IUserUsecase interface {
 	SignUp(user model.User) (model.UserResponse, error)
 	Login(user model.User) (string, error)
+	VerifyToken(tokenString string) (*jwt.Token, error)
 }
 
 type userUsecase struct {
@@ -83,4 +84,23 @@ func (uu *userUsecase) Login(user model.User) (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func (uu *userUsecase) VerifyToken(tokenString string) (*jwt.Token, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(os.Getenv("SECRET")), nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !token.Valid {
+		return nil, errors.New("invalid token")
+	}
+
+	return token, nil
 }

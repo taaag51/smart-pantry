@@ -10,23 +10,35 @@ interface ApiError {
   message: string
 }
 
+interface LoginResponse {
+  token: string
+  message: string
+}
+
 export const useMutateAuth = () => {
   const navigate = useNavigate()
   const resetEditedTask = useStore((state) => state.resetEditedTask)
   const { switchErrorHandling } = useError()
 
   const loginMutation = useMutation<
-    AxiosResponse,
+    AxiosResponse<LoginResponse>,
     AxiosError<ApiError>,
     Credential
   >({
     mutationFn: async (user: Credential) => {
       await getCsrfToken()
-      return await axiosInstance.post('/login', user)
+      return await axiosInstance.post<LoginResponse>('/login', user)
     },
-    onSuccess: () => {
-      window.dispatchEvent(new CustomEvent('login-success'))
-      navigate('/pantry', { replace: true })
+    onSuccess: (res) => {
+      const token = res.data.token
+      if (token) {
+        localStorage.setItem('accessToken', token)
+        window.dispatchEvent(new CustomEvent('login-success'))
+        navigate('/pantry', { replace: true })
+      } else {
+        console.error('No token in login response')
+        switchErrorHandling('ログインに失敗しました')
+      }
     },
     onError: (err: AxiosError<ApiError>) => {
       console.error('Login error:', err)

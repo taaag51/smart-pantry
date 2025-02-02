@@ -20,6 +20,7 @@ func NewRouter(uc controller.IUserController, fc controller.IFoodItemController,
 		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token"},
+		ExposeHeaders:    []string{"X-CSRF-Token"},
 		AllowCredentials: true,
 		MaxAge:           86400,
 	}))

@@ -39,6 +39,11 @@ const handleApiError = (
   defaultMessage: string,
   errorHandler: (message: string) => void
 ) => {
+  console.error('API Error:', {
+    response: err.response?.data,
+    status: err.response?.status,
+    headers: err.response?.headers,
+  })
   const message = err.response?.data.message || defaultMessage
   errorHandler(message)
 }
@@ -62,10 +67,14 @@ export const useMutateFoodItem = () => {
    */
   const createFoodItemMutation = useMutation({
     mutationFn: async (foodItem: Omit<FoodItem, 'id'>) => {
+      console.log('Creating food item with:', foodItem)
       await getCsrfToken()
+      const headers = axiosInstance.defaults.headers
+      console.log('Request headers:', headers)
       return await axiosInstance.post<ApiResponse>('/food-items', foodItem)
     },
     onSuccess: (res: AxiosResponse<ApiResponse>) => {
+      console.log('Creation successful:', res.data)
       updateFoodItemsCache(queryClient, (prev) => [...prev, res.data.data])
     },
     onError: (err: AxiosError<ApiError>) => {

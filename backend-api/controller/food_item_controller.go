@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -99,13 +100,31 @@ func (fc *foodItemController) GetFoodItemById(c echo.Context) error {
 func (fc *foodItemController) CreateFoodItem(c echo.Context) error {
 	foodItem := model.FoodItem{}
 	if err := c.Bind(&foodItem); err != nil {
-		return handleError(c, http.StatusBadRequest, "リクエスト形式が無効です")
+		return handleError(c, http.StatusBadRequest, fmt.Sprintf("リクエスト形式が無効です: %v", err))
 	}
 
 	// JWTトークンからユーザーIDを取得
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*jwt.MapClaims)
-	userId := uint((*claims)["user_id"].(float64))
+	user := c.Get("user")
+	if user == nil {
+		return handleError(c, http.StatusBadRequest, "ユーザー情報が取得できません")
+	}
+
+	token, ok := user.(*jwt.Token)
+	if !ok {
+		return handleError(c, http.StatusBadRequest, "トークンの形式が無効です")
+	}
+
+	claims, ok := token.Claims.(*jwt.MapClaims)
+	if !ok {
+		return handleError(c, http.StatusBadRequest, "クレームの形式が無効です")
+	}
+
+	userIdFloat, ok := (*claims)["user_id"].(float64)
+	if !ok {
+		return handleError(c, http.StatusBadRequest, "ユーザーIDの形式が無効です")
+	}
+
+	userId := uint(userIdFloat)
 	foodItem.UserId = userId
 
 	createdFoodItem, err := fc.fu.CreateFoodItem(foodItem)

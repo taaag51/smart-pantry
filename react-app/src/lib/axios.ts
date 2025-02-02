@@ -18,7 +18,11 @@ axiosInstance.interceptors.request.use(
       config.headers['X-CSRF-Token'] = csrfToken
     }
 
-    // cookieベースの認証を使用するため、ここでの追加のトークン設定は不要
+    // JWTトークンがある場合は設定
+    const token = localStorage.getItem('accessToken')
+    if (token && config.url !== '/csrf') {
+      config.headers['Authorization'] = `Bearer ${token}`
+    }
 
     return config
   },
@@ -69,11 +73,14 @@ axiosInstance.interceptors.response.use(
 
 export const getCsrfToken = async () => {
   try {
-    const { data } = await axiosInstance.get('/csrf')
-    if (data.csrf_token) {
-      axiosInstance.defaults.headers.common['X-CSRF-Token'] = data.csrf_token
+    const response = await axiosInstance.get('/csrf')
+    const token = response.headers['x-csrf-token']
+    if (token) {
+      axiosInstance.defaults.headers.common['X-CSRF-Token'] = token
+      return token
     } else {
-      console.error('No CSRF token in response')
+      console.error('No CSRF token in response headers')
+      throw new Error('CSRFトークンの取得に失敗しました')
     }
   } catch (error) {
     console.error('Failed to get CSRF token:', error)

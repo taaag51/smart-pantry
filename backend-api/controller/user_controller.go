@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/taaag51/smart-pantry/backend-api/model"
 	"github.com/taaag51/smart-pantry/backend-api/usecase"
 
@@ -131,7 +132,11 @@ func (uc *userController) LogIn(c echo.Context) error {
 		time.Now().Add(24*time.Hour),
 	))
 
-	return handleError(c, http.StatusOK, "ログインに成功しました")
+	// レスポンスにトークンを含める
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "ログインに成功しました",
+		"token":   tokenString,
+	})
 }
 
 // LogOut godoc
@@ -157,9 +162,9 @@ func (uc *userController) LogOut(c echo.Context) error {
 // @Router /csrf [get]
 func (uc *userController) CsrfToken(c echo.Context) error {
 	token := c.Get("csrf").(string)
+	c.Response().Header().Set("X-CSRF-Token", token)
 	return c.JSON(http.StatusOK, map[string]string{
-		"csrf_token": token,
-		"message":    "CSRFトークンを取得しました",
+		"message": "CSRFトークンを取得しました",
 	})
 }
 
@@ -173,7 +178,29 @@ func (uc *userController) CsrfToken(c echo.Context) error {
 // @Security ApiKeyAuth
 // @Router /verify [get]
 func (uc *userController) VerifyToken(c echo.Context) error {
-	// JWTミドルウェアによって既に検証されているため、
-	// このエンドポイントに到達できた時点で有効なトークン
-	return handleError(c, http.StatusOK, "トークンは有効です")
+	tokenString := c.Request().Header.Get("Authorization")
+	if tokenString == "" {
+		return handleError(c, http.StatusBadRequest, "トークンがありません")
+	}
+
+	// Bearer プレフィックスを削除
+	if len(tokenString) < 7 || tokenString[:7] != "Bearer " {
+		return handleError(c, http.StatusBadRequest, "無効なトークン形式です")
+	}
+	tokenString = tokenString[7:]
+
+	token, err := uc.uu.VerifyToken(tokenString)
+	if err != nil {
+		return handleError(c, http.StatusUnauthorized, "無効なトークンです")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return handleError(c, http.StatusUnauthorized, "無効なトークンです")
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "トークンは有効です",
+		"email":   claims["email"],
+	})
 }
