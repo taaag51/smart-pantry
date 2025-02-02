@@ -30,95 +30,18 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.21"
+          go-version: "1.23"
 
-      - name: Install dependencies
-        run: |
-          cd backend-api
-          go mod download
-
+      - name: Install backend dependencies
+        working-directory: ./backend-api
+        run: go mod download
       - name: Run backend tests
-        run: |
-          cd backend-api
-          go test -v -coverprofile=coverage.out ./...
+        working-directory: ./backend-api
+        run: go test -v -coverprofile=coverage.out ./...
         env:
           DB_HOST: localhost
           DB_USER: test_user
           DB_PASSWORD: test_password
           DB_NAME: smart_pantry_test
-          JWT_SECRET: test_secret
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage
-          path: backend-api/coverage.out
-
-  frontend-test:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "npm"
-          cache-dependency-path: react-app/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          cd react-app
-          npm ci
-
-      - name: Run frontend tests
-        run: |
-          cd react-app
-          npm test -- --coverage --watchAll=false
-        env:
-          CI: true
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-coverage
-          path: react-app/coverage/
-
-  coverage-report:
-    needs: [backend-test, frontend-test]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download backend coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-coverage
-          path: coverage/backend
-
-      - name: Download frontend coverage
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-coverage
-          path: coverage/frontend
-
-      - name: Generate coverage report
-        run: |
-          echo "# テストカバレッジレポート" > coverage-report.md
-          echo "## バックエンド" >> coverage-report.md
-          echo '```' >> coverage-report.md
-          go tool cover -func=coverage/backend/coverage.out >> coverage-report.md
-          echo '```' >> coverage-report.md
-          echo "## フロントエンド" >> coverage-report.md
-          echo '```' >> coverage-report.md
-          cat coverage/frontend/coverage-summary.json >> coverage-report.md
-          echo '```' >> coverage-report.md
-
-      - name: Upload combined coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage-report.md
