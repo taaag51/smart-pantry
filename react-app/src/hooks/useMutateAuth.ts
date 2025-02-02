@@ -33,22 +33,28 @@ export const useMutateAuth = () => {
         await getCsrfToken()
         // ログインリクエスト
         return await axiosInstance.post<LoginResponse>('/login', user)
-      } catch (error) {
-        if (error instanceof Error) {
-          if (error.message.includes('CSRF')) {
+      } catch (err) {
+        if (err instanceof Error) {
+          if (err.message.includes('CSRF')) {
             throw new Error(
               'セキュリティトークンの取得に失敗しました。ページを再読み込みしてください。'
             )
           }
         }
-        throw error
+        throw err
       }
     },
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       const token = res.data.data.token
       if (token) {
         localStorage.setItem('accessToken', token)
+        // 認証状態を更新
         window.dispatchEvent(new CustomEvent('login-success'))
+        // トークンの設定とイベントの反映を待つ
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        axiosInstance.defaults.headers.common[
+          'Authorization'
+        ] = `Bearer ${token}`
         navigate('/pantry', { replace: true })
       } else {
         console.error('No token in login response')
@@ -80,15 +86,15 @@ export const useMutateAuth = () => {
         await getCsrfToken()
         // アカウント登録リクエスト
         return await axiosInstance.post('/signup', user)
-      } catch (error) {
-        if (error instanceof Error) {
-          if (error.message.includes('CSRF')) {
+      } catch (err) {
+        if (err instanceof Error) {
+          if (err.message.includes('CSRF')) {
             throw new Error(
               'セキュリティトークンの取得に失敗しました。ページを再読み込みしてください。'
             )
           }
         }
-        throw error
+        throw err
       }
     },
     onError: (err: AxiosError<ApiError>) => {
@@ -114,29 +120,34 @@ export const useMutateAuth = () => {
           await getCsrfToken()
           // ログアウトリクエスト
           return await axiosInstance.post('/logout')
-        } catch (error) {
-          if (error instanceof Error) {
-            if (error.message.includes('CSRF')) {
+        } catch (err) {
+          if (err instanceof Error) {
+            if (err.message.includes('CSRF')) {
               throw new Error(
                 'セキュリティトークンの取得に失敗しました。ページを再読み込みしてください。'
               )
             }
           }
-          throw error
+          throw err
         }
       },
-      onSuccess: () => {
+      onSuccess: async () => {
         localStorage.removeItem('accessToken')
-        window.dispatchEvent(new CustomEvent('logout-success'))
         resetEditedTask()
-        navigate('/login', { replace: true })
+        window.dispatchEvent(new CustomEvent('logout-success'))
+        // 状態の更新が反映されるのを待ってからナビゲーション
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        navigate('/', { replace: true })
       },
-      onError: (err: AxiosError<ApiError>) => {
+      onError: async (err: AxiosError<ApiError>) => {
         console.error('Logout error:', err)
         // エラーが発生しても、ローカルのクリーンアップは実行
         localStorage.removeItem('accessToken')
         resetEditedTask()
-        navigate('/login', { replace: true })
+        window.dispatchEvent(new CustomEvent('logout-success'))
+        // 状態の更新が反映されるのを待ってからナビゲーション
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        navigate('/', { replace: true })
       },
     }
   )

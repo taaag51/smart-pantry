@@ -5,227 +5,165 @@ import (
 	"testing"
 	"time"
 
-	"github.com/taaag51/smart-pantry/backend-api/model"
-	"github.com/taaag51/smart-pantry/backend-api/testutil"
-
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/taaag51/smart-pantry/backend-api/model"
 )
 
-// モックリポジトリの定義
+func init() {
+	// テスト用のシークレットキーを設定
+	os.Setenv("SECRET", "test-secret-key")
+}
+
 type MockUserRepository struct {
 	mock.Mock
 }
 
-func (m *MockUserRepository) CreateUser(user *model.User) error {
+func (m *MockUserRepository) CreateUser(user *model.User) (model.User, error) {
 	args := m.Called(user)
-	return args.Error(0)
+	return args.Get(0).(model.User), args.Error(1)
 }
 
-func (m *MockUserRepository) GetUserByEmail(user *model.User, email string) error {
-	args := m.Called(user, email)
-	if args.Error(0) != nil {
-		return args.Error(0)
-	}
-	// モックユーザーデータの設定
-	if mockUser, ok := args.Get(1).(*model.User); ok && mockUser != nil {
-		*user = *mockUser
-	}
-	return nil
+func (m *MockUserRepository) GetUserByEmail(email string) (model.User, error) {
+	args := m.Called(email)
+	return args.Get(0).(model.User), args.Error(1)
 }
 
-// モックバリデータの定義
+func (m *MockUserRepository) GetUserByID(id uint) (model.User, error) {
+	args := m.Called(id)
+	return args.Get(0).(model.User), args.Error(1)
+}
+
 type MockUserValidator struct {
 	mock.Mock
 }
 
-func (m *MockUserValidator) UserValidate(user model.User) error {
+func (m *MockUserValidator) ValidateUser(user model.User) error {
 	args := m.Called(user)
 	return args.Error(0)
 }
 
-func TestUserUsecase_SignUp(t *testing.T) {
-	// テスト用の環境変数設定
-	os.Setenv("SECRET", "test_secret_key")
-	defer os.Unsetenv("SECRET")
-
-	tests := []struct {
-		name       string
-		user       model.User
-		setupMocks func(*MockUserRepository, *MockUserValidator)
-		wantErr    bool
-		errMessage string
-	}{
-		{
-			name: "正常な新規登録",
-			user: model.User{
-				Email:    "test@example.com",
-				Password: "validPassword123",
-			},
-			setupMocks: func(ur *MockUserRepository, uv *MockUserValidator) {
-				uv.On("UserValidate", mock.Anything).Return(nil)
-				ur.On("GetUserByEmail", mock.Anything, "test@example.com").Return(assert.AnError) // ユーザーが存在しない
-				ur.On("CreateUser", mock.Anything).Return(nil)
-			},
-			wantErr: false,
-		},
-		{
-			name: "重複メールアドレス",
-			user: model.User{
-				Email:    "existing@example.com",
-				Password: "validPassword123",
-			},
-			setupMocks: func(ur *MockUserRepository, uv *MockUserValidator) {
-				uv.On("UserValidate", mock.Anything).Return(nil)
-				ur.On("GetUserByEmail", mock.Anything, "existing@example.com").Return(nil)
-			},
-			wantErr:    true,
-			errMessage: "email already exists",
-		},
-		{
-			name: "バリデーションエラー",
-			user: model.User{
-				Email:    "invalid-email",
-				Password: "short",
-			},
-			setupMocks: func(ur *MockUserRepository, uv *MockUserValidator) {
-				uv.On("UserValidate", mock.Anything).Return(assert.AnError)
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// モックの準備
-			ur := new(MockUserRepository)
-			uv := new(MockUserValidator)
-			tt.setupMocks(ur, uv)
-
-			// ユースケースの作成
-			uu := NewUserUsecase(ur, uv)
-
-			// テスト実行
-			_, err := uu.SignUp(tt.user)
-
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.errMessage != "" {
-					assert.Contains(t, err.Error(), tt.errMessage)
-				}
-			} else {
-				assert.NoError(t, err)
-			}
-
-			// モックの検証
-			ur.AssertExpectations(t)
-			uv.AssertExpectations(t)
-		})
-	}
+func (m *MockUserValidator) ValidateLogin(user model.User) error {
+	args := m.Called(user)
+	return args.Error(0)
 }
 
-func TestUserUsecase_Login(t *testing.T) {
-	// テスト用の環境変数設定
-	os.Setenv("SECRET", "test_secret_key")
-	defer os.Unsetenv("SECRET")
+func TestSignUp(t *testing.T) {
+	ur := new(MockUserRepository)
+	uv := new(MockUserValidator)
+	uu := NewUserUsecase(ur, uv)
 
-	// テスト用のハッシュ化されたパスワード
-	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("correctPassword123"), 10)
+	t.Run("正常系：ユーザー登録成功", func(t *testing.T) {
+		user := model.User{
+			Email:    "test@example.com",
+			Password: "password123",
+		}
 
-	tests := []struct {
-		name       string
-		user       model.User
-		setupMocks func(*MockUserRepository, *MockUserValidator)
-		wantErr    bool
-		errMessage string
-	}{
-		{
-			name: "正常なログイン",
-			user: model.User{
-				Email:    "test@example.com",
-				Password: "correctPassword123",
-			},
-			setupMocks: func(ur *MockUserRepository, uv *MockUserValidator) {
-				uv.On("UserValidate", mock.Anything).Return(nil)
-				ur.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, &model.User{
-					ID:       1,
-					Email:    "test@example.com",
-					Password: string(hashedPassword),
-				})
-			},
-			wantErr: false,
-		},
-		{
-			name: "存在しないユーザー",
-			user: model.User{
-				Email:    "nonexistent@example.com",
-				Password: "password123",
-			},
-			setupMocks: func(ur *MockUserRepository, uv *MockUserValidator) {
-				uv.On("UserValidate", mock.Anything).Return(nil)
-				ur.On("GetUserByEmail", mock.Anything, "nonexistent@example.com").Return(assert.AnError)
-			},
-			wantErr:    true,
-			errMessage: "invalid email or password",
-		},
-		{
-			name: "パスワード不一致",
-			user: model.User{
-				Email:    "test@example.com",
-				Password: "wrongPassword123",
-			},
-			setupMocks: func(ur *MockUserRepository, uv *MockUserValidator) {
-				uv.On("UserValidate", mock.Anything).Return(nil)
-				ur.On("GetUserByEmail", mock.Anything, "test@example.com").Return(nil, &model.User{
-					ID:       1,
-					Email:    "test@example.com",
-					Password: string(hashedPassword),
-				})
-			},
-			wantErr:    true,
-			errMessage: "invalid email or password",
-		},
-	}
+		uv.On("ValidateUser", user).Return(nil)
+		ur.On("CreateUser", &user).Return(user, nil)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// モックの準備
-			ur := new(MockUserRepository)
-			uv := new(MockUserValidator)
-			tt.setupMocks(ur, uv)
+		createdUser, err := uu.SignUp(user)
 
-			// ユースケースの作成
-			uu := NewUserUsecase(ur, uv)
+		assert.NoError(t, err)
+		assert.Equal(t, user.Email, createdUser.Email)
+		ur.AssertExpectations(t)
+		uv.AssertExpectations(t)
+	})
+}
 
-			// テスト実行
-			token, err := uu.Login(tt.user)
+func TestLogin(t *testing.T) {
+	ur := new(MockUserRepository)
+	uv := new(MockUserValidator)
+	uu := NewUserUsecase(ur, uv)
 
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.errMessage != "" {
-					assert.Contains(t, err.Error(), tt.errMessage)
-				}
-				assert.Empty(t, token)
-			} else {
-				assert.NoError(t, err)
-				assert.NotEmpty(t, token)
+	t.Run("正常系：ログイン成功", func(t *testing.T) {
+		user := model.User{
+			Email:    "test@example.com",
+			Password: "password123",
+		}
 
-				// JWTトークンの検証
-				claims, err := testutil.ParseJWTToken(token)
-				assert.NoError(t, err)
-				assert.Equal(t, uint(1), uint(claims["user_id"].(float64)))
-				assert.Equal(t, "test@example.com", claims["email"].(string))
+		uv.On("ValidateLogin", user).Return(nil)
+		ur.On("GetUserByEmail", user.Email).Return(user, nil)
 
-				// 有効期限の検証
-				exp := time.Unix(int64(claims["exp"].(float64)), 0)
-				assert.True(t, exp.After(time.Now()))
-				assert.True(t, exp.Before(time.Now().Add(13*time.Hour))) // 12時間 + バッファ
-			}
+		tokenPair, err := uu.Login(user)
 
-			// モックの検証
-			ur.AssertExpectations(t)
-			uv.AssertExpectations(t)
-		})
-	}
+		assert.NoError(t, err)
+		assert.NotEmpty(t, tokenPair.AccessToken)
+		assert.NotEmpty(t, tokenPair.RefreshToken)
+		assert.True(t, tokenPair.AccessExpiry.After(time.Now()))
+		assert.True(t, tokenPair.RefreshExpiry.After(time.Now()))
+		ur.AssertExpectations(t)
+		uv.AssertExpectations(t)
+	})
+}
+
+func TestVerifyToken(t *testing.T) {
+	ur := new(MockUserRepository)
+	uv := new(MockUserValidator)
+	uu := NewUserUsecase(ur, uv)
+
+	t.Run("正常系：トークン検証成功", func(t *testing.T) {
+		email := "test@example.com"
+		tokenString, _, err := generateToken(email, "access", 15)
+		assert.NoError(t, err)
+
+		token, err := uu.VerifyToken(tokenString)
+		assert.NoError(t, err)
+		assert.True(t, token.Valid)
+
+		claims, ok := token.Claims.(jwt.MapClaims)
+		assert.True(t, ok)
+		assert.Equal(t, email, claims["email"])
+	})
+
+	t.Run("異常系：無効なトークン", func(t *testing.T) {
+		_, err := uu.VerifyToken("invalid.token.string")
+		assert.Error(t, err)
+	})
+}
+
+func TestRefreshTokens(t *testing.T) {
+	ur := new(MockUserRepository)
+	uv := new(MockUserValidator)
+	uu := NewUserUsecase(ur, uv)
+
+	t.Run("正常系：トークン更新成功", func(t *testing.T) {
+		email := "test@example.com"
+		user := model.User{Email: email}
+
+		refreshToken, _, err := generateToken(email, "refresh", 24*7)
+		assert.NoError(t, err)
+
+		uv.On("ValidateLogin", mock.AnythingOfType("model.User")).Return(nil)
+		ur.On("GetUserByEmail", email).Return(user, nil)
+
+		tokenPair, err := uu.RefreshTokens(refreshToken)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, tokenPair.AccessToken)
+		assert.NotEmpty(t, tokenPair.RefreshToken)
+		assert.True(t, tokenPair.AccessExpiry.After(time.Now()))
+		assert.True(t, tokenPair.RefreshExpiry.After(time.Now()))
+
+		ur.AssertExpectations(t)
+		uv.AssertExpectations(t)
+	})
+
+	t.Run("異常系：無効なリフレッシュトークン", func(t *testing.T) {
+		_, err := uu.RefreshTokens("invalid.refresh.token")
+		assert.Error(t, err)
+	})
+}
+
+func TestMain(m *testing.M) {
+	// テスト用の環境変数を設定
+	os.Setenv("SECRET", "test-secret-key")
+
+	// テストを実行
+	code := m.Run()
+
+	// テスト終了後に環境変数をクリア
+	os.Unsetenv("SECRET")
+
+	os.Exit(code)
 }

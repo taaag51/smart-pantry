@@ -7,85 +7,64 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// レスポンス型の定義
-type ErrorResponse struct {
-	Type    string `json:"type,omitempty"`
-	Message string `json:"message"`
-}
-
-type SuccessResponse struct {
+type Response struct {
+	Status  string      `json:"status"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-type AuthCookie struct {
-	Name     string
-	Value    string
-	Path     string
-	Expires  time.Time
-	HTTPOnly bool
-	SameSite http.SameSite
+// SetCookie はクッキーを設定する
+func SetCookie(c echo.Context, cookie *http.Cookie) {
+	http.SetCookie(c.Response(), cookie)
 }
 
-func NewAuthCookie(token string, expires time.Time) *AuthCookie {
-	return &AuthCookie{
+// NewAuthCookie は新しい認証用クッキーを作成する
+func NewAuthCookie(token string, expires time.Time) *http.Cookie {
+	return &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		Path:     "/",
 		Expires:  expires,
-		HTTPOnly: true,
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
 }
 
-func ClearAuthCookie() *AuthCookie {
-	return &AuthCookie{
+// ClearAuthCookie は認証用クッキーをクリアする
+func ClearAuthCookie() *http.Cookie {
+	return &http.Cookie{
 		Name:     "token",
 		Value:    "",
-		Path:     "/",
 		Expires:  time.Now().Add(-24 * time.Hour),
-		HTTPOnly: true,
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	}
 }
 
-func SetCookie(c echo.Context, cookie *AuthCookie) {
-	c.SetCookie(&http.Cookie{
-		Name:     cookie.Name,
-		Value:    cookie.Value,
-		Path:     cookie.Path,
-		Expires:  cookie.Expires,
-		HttpOnly: cookie.HTTPOnly,
-		SameSite: cookie.SameSite,
-	})
-}
-
-// HandleError は共通のエラーレスポンスを生成します
-func HandleError(c echo.Context, status int, message string) error {
-	return c.JSON(status, ErrorResponse{
-		Message: message,
-	})
-}
-
-// HandleErrorWithType は型情報を含むエラーレスポンスを生成します
-func HandleErrorWithType(c echo.Context, status int, errorType string, message string) error {
-	return c.JSON(status, ErrorResponse{
-		Type:    errorType,
-		Message: message,
-	})
-}
-
-// HandleSuccess は共通の成功レスポンスを生成します
+// HandleSuccess は成功レスポンスを返す
 func HandleSuccess(c echo.Context, status int, message string) error {
-	return c.JSON(status, SuccessResponse{
+	return c.JSON(status, Response{
+		Status:  "success",
 		Message: message,
 	})
 }
 
-// HandleSuccessWithData はデータを含む成功レスポンスを生成します
+// HandleSuccessWithData は成功レスポンスとデータを返す
 func HandleSuccessWithData(c echo.Context, status int, message string, data interface{}) error {
-	return c.JSON(status, SuccessResponse{
+	return c.JSON(status, Response{
+		Status:  "success",
 		Message: message,
 		Data:    data,
+	})
+}
+
+// HandleError はエラーレスポンスを返す
+func HandleError(c echo.Context, status int, message string) error {
+	return c.JSON(status, Response{
+		Status:  "error",
+		Message: message,
 	})
 }

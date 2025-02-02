@@ -2,13 +2,13 @@ package repository
 
 import (
 	"github.com/taaag51/smart-pantry/backend-api/model"
-
 	"gorm.io/gorm"
 )
 
 type IUserRepository interface {
-	GetUserByEmail(user *model.User, email string) error
-	CreateUser(user *model.User) error
+	CreateUser(user *model.User) (model.User, error)
+	GetUserByEmail(email string) (model.User, error)
+	GetUserByID(id uint) (model.User, error)
 }
 
 type userRepository struct {
@@ -19,16 +19,25 @@ func NewUserRepository(db *gorm.DB) IUserRepository {
 	return &userRepository{db}
 }
 
-func (ur *userRepository) GetUserByEmail(user *model.User, email string) error {
-	if err := ur.db.Where("email=?", email).First(user).Error; err != nil {
-		return err
+func (ur *userRepository) CreateUser(user *model.User) (model.User, error) {
+	if err := ur.db.Create(user).Error; err != nil {
+		return model.User{}, err
 	}
-	return nil
+	return *user, nil
 }
 
-func (ur *userRepository) CreateUser(user *model.User) error {
-	if err := ur.db.Create(user).Error; err != nil {
-		return err
+func (ur *userRepository) GetUserByEmail(email string) (model.User, error) {
+	var user model.User
+	if err := ur.db.Where("email = ?", email).First(&user).Error; err != nil {
+		return model.User{}, err
 	}
-	return nil
+	return user, nil
+}
+
+func (ur *userRepository) GetUserByID(id uint) (model.User, error) {
+	var user model.User
+	if err := ur.db.First(&user, id).Error; err != nil {
+		return model.User{}, err
+	}
+	return user, nil
 }

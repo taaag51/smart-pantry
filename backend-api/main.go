@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"github.com/taaag51/smart-pantry/backend-api/controller"
 	"github.com/taaag51/smart-pantry/backend-api/db"
 	"github.com/taaag51/smart-pantry/backend-api/repository"
@@ -13,6 +15,12 @@ import (
 )
 
 func main() {
+	// プロジェクトルートの.envファイルを読み込む
+	envPath := filepath.Join("..", ".env")
+	if err := godotenv.Load(envPath); err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+
 	db := db.NewDB()
 	userValidator := validator.NewUserValidator()
 

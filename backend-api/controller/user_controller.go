@@ -5,13 +5,11 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/taaag51/smart-pantry/backend-api/model"
-	"github.com/taaag51/smart-pantry/backend-api/usecase"
-
+	"github.com/labstack/echo/v4"
 	"github.com/taaag51/smart-pantry/backend-api/controller/response"
 	"github.com/taaag51/smart-pantry/backend-api/errors"
-
-	"github.com/labstack/echo/v4"
+	"github.com/taaag51/smart-pantry/backend-api/model"
+	"github.com/taaag51/smart-pantry/backend-api/usecase"
 )
 
 type IUserController interface {
@@ -20,6 +18,7 @@ type IUserController interface {
 	LogOut(c echo.Context) error
 	CsrfToken(c echo.Context) error
 	VerifyToken(c echo.Context) error
+	RefreshToken(c echo.Context) error
 }
 
 type userController struct {
@@ -46,7 +45,7 @@ func bindUser(c echo.Context) (model.User, error) {
 func (uc *userController) SignUp(c echo.Context) error {
 	user, err := bindUser(c)
 	if err != nil {
-		return response.HandleError(c, http.StatusInternalServerError, "ユーザーの登録に失敗しました")
+		return response.HandleError(c, http.StatusBadRequest, "リクエストの形式が不正です")
 	}
 
 	_, err = uc.uu.SignUp(user)
@@ -63,23 +62,50 @@ func (uc *userController) LogIn(c echo.Context) error {
 		return response.HandleError(c, http.StatusBadRequest, "リクエストの形式が不正です")
 	}
 
-	tokenString, err := uc.uu.Login(user)
+	tokenPair, err := uc.uu.Login(user)
 	if err != nil {
 		return response.HandleError(c, http.StatusUnauthorized, "メールアドレスまたはパスワードが正しくありません")
 	}
 
+	// アクセストークンをCookieに設定
 	response.SetCookie(c, response.NewAuthCookie(
-		tokenString,
-		time.Now().Add(24*time.Hour),
+		tokenPair.AccessToken,
+		tokenPair.AccessExpiry,
 	))
 
-	return response.HandleSuccessWithData(c, http.StatusOK, "ログインに成功しました", map[string]string{
-		"token": tokenString,
+	// リフレッシュトークンをCookieに設定（HTTPOnly）
+	response.SetCookie(c, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokenPair.RefreshToken,
+		Expires:  tokenPair.RefreshExpiry,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	return response.HandleSuccessWithData(c, http.StatusOK, "ログインに成功しました", &model.TokenResponse{
+		AccessToken:  tokenPair.AccessToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    int(time.Until(tokenPair.AccessExpiry).Seconds()),
+		ExpiresAt:    tokenPair.AccessExpiry,
+		RefreshToken: tokenPair.RefreshToken,
 	})
 }
 
 func (uc *userController) LogOut(c echo.Context) error {
+	// アクセストークンとリフレッシュトークンのCookieを削除
 	response.SetCookie(c, response.ClearAuthCookie())
+	response.SetCookie(c, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Expires:  time.Now().Add(-24 * time.Hour),
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	return response.HandleSuccess(c, http.StatusOK, "ログアウトしました")
 }
 
@@ -102,6 +128,7 @@ func (uc *userController) VerifyToken(c echo.Context) error {
 	}
 	tokenString = tokenString[7:]
 
+	// トークンの検証のみを行い、新しいトークンは発行しない
 	token, err := uc.uu.VerifyToken(tokenString)
 	if err != nil {
 		return response.HandleError(c, http.StatusUnauthorized, "未認証")
@@ -114,5 +141,43 @@ func (uc *userController) VerifyToken(c echo.Context) error {
 
 	return response.HandleSuccessWithData(c, http.StatusOK, "トークンは有効です", map[string]interface{}{
 		"email": claims["email"],
+	})
+}
+
+func (uc *userController) RefreshToken(c echo.Context) error {
+	// リフレッシュトークンをCookieから取得
+	refreshCookie, err := c.Cookie("refresh_token")
+	if err != nil {
+		return response.HandleError(c, http.StatusUnauthorized, "リフレッシュトークンが見つかりません")
+	}
+
+	// リフレッシュトークンを使用して新しいトークンペアを生成
+	tokenPair, err := uc.uu.RefreshTokens(refreshCookie.Value)
+	if err != nil {
+		return response.HandleError(c, http.StatusUnauthorized, "トークンの更新に失敗しました")
+	}
+
+	// 新しいアクセストークンをCookieに設定
+	response.SetCookie(c, response.NewAuthCookie(
+		tokenPair.AccessToken,
+		tokenPair.AccessExpiry,
+	))
+
+	// 新しいリフレッシュトークンをCookieに設定
+	response.SetCookie(c, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    tokenPair.RefreshToken,
+		Expires:  tokenPair.RefreshExpiry,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	return response.HandleSuccessWithData(c, http.StatusOK, "トークンを更新しました", &model.TokenResponse{
+		AccessToken: tokenPair.AccessToken,
+		TokenType:   "Bearer",
+		ExpiresIn:   int(time.Until(tokenPair.AccessExpiry).Seconds()),
+		ExpiresAt:   tokenPair.AccessExpiry,
 	})
 }

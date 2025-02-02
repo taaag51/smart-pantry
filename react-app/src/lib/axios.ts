@@ -34,12 +34,8 @@ axiosInstance.interceptors.request.use(
 
 // レスポンスインターセプターを追加
 axiosInstance.interceptors.response.use(
-  (response) => {
-    return response
-  },
+  (response) => response,
   async (error) => {
-    console.error('Response error:', error)
-
     // ネットワークエラーの場合
     if (!error.response) {
       window.dispatchEvent(
@@ -50,20 +46,48 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    const originalRequest = error.config
+
     // 認証エラーの場合
     if (error.response.status === 401) {
-      window.dispatchEvent(new CustomEvent('unauthorized'))
+      // すでにリトライ済みの場合は、認証エラーとして処理
+      if (originalRequest._retry) {
+        localStorage.removeItem('accessToken')
+        window.dispatchEvent(new CustomEvent('unauthorized'))
+        return Promise.reject(error)
+      }
+
+      originalRequest._retry = true
+
+      try {
+        // リフレッシュトークンを使用して新しいアクセストークンを取得
+        const response = await axiosInstance.post('/refresh-token')
+        const { accessToken } = response.data
+
+        if (accessToken) {
+          localStorage.setItem('accessToken', accessToken)
+          axiosInstance.defaults.headers.common[
+            'Authorization'
+          ] = `Bearer ${accessToken}`
+          originalRequest.headers['Authorization'] = `Bearer ${accessToken}`
+          return axiosInstance(originalRequest)
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError)
+        localStorage.removeItem('accessToken')
+        window.dispatchEvent(new CustomEvent('unauthorized'))
+        return Promise.reject(error)
+      }
     }
 
     // CSRFエラーの場合
     if (error.response.data?.message?.includes('csrf')) {
       try {
         await getCsrfToken()
-        // 元のリクエストを再試行
-        const config = error.config
-        return axiosInstance(config)
+        return axiosInstance(error.config)
       } catch (retryError) {
         console.error('CSRF retry failed:', retryError)
+        return Promise.reject(retryError)
       }
     }
 
@@ -78,10 +102,8 @@ export const getCsrfToken = async () => {
     if (token) {
       axiosInstance.defaults.headers.common['X-CSRF-Token'] = token
       return token
-    } else {
-      console.error('No CSRF token in response headers')
-      throw new Error('CSRFトークンの取得に失敗しました')
     }
+    throw new Error('CSRFトークンの取得に失敗しました')
   } catch (error) {
     console.error('Failed to get CSRF token:', error)
     throw error
