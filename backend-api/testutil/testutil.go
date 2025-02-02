@@ -2,12 +2,30 @@
 package testutil
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/taaag51/smart-pantry/backend-api/model"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+// ParseJWTToken はJWTトークンをパースし、クレームを返します
+func ParseJWTToken(tokenString string) (jwt.MapClaims, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return []byte(os.Getenv("SECRET")), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		return claims, nil
+	}
+	return nil, jwt.ErrInvalidKey
+}
 
 // TestDB はテスト用のデータベース接続を管理する構造体です
 type TestDB struct {
@@ -16,7 +34,24 @@ type TestDB struct {
 
 // GetTestDSN はテスト用のデータベース接続文字列を返します
 func GetTestDSN() string {
-	return "host=localhost user=test_user password=test_pass dbname=test_db port=5432 sslmode=disable"
+	host := os.Getenv("DB_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	user := os.Getenv("DB_USER")
+	if user == "" {
+		user = "test_user"
+	}
+	password := os.Getenv("DB_PASSWORD")
+	if password == "" {
+		password = "test_password"
+	}
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		dbName = "smart_pantry_test"
+	}
+	return fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=5432 sslmode=disable",
+		host, user, password, dbName)
 }
 
 // NewTestDB は新しいテストデータベース接続を作成します
