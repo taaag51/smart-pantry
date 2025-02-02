@@ -10,8 +10,6 @@ import (
 	"github.com/taaag51/smart-pantry/backend-api/validator"
 )
 
-var secretKey = []byte(os.Getenv("SECRET"))
-
 type IUserUsecase interface {
 	SignUp(user model.User) (model.User, error)
 	Login(user model.User) (*model.TokenPair, error)
@@ -20,15 +18,17 @@ type IUserUsecase interface {
 }
 
 type userUsecase struct {
-	ur repository.IUserRepository
-	uv validator.IUserValidator
+	ur        repository.IUserRepository
+	uv        validator.IUserValidator
+	secretKey []byte
 }
 
 func NewUserUsecase(ur repository.IUserRepository, uv validator.IUserValidator) IUserUsecase {
-	if len(secretKey) == 0 {
+	secret := os.Getenv("SECRET")
+	if secret == "" {
 		panic("SECRET environment variable is not set")
 	}
-	return &userUsecase{ur: ur, uv: uv}
+	return &userUsecase{ur: ur, uv: uv, secretKey: []byte(secret)}
 }
 
 func (uu *userUsecase) SignUp(user model.User) (model.User, error) {
@@ -51,13 +51,13 @@ func (uu *userUsecase) Login(user model.User) (*model.TokenPair, error) {
 	// パスワード検証は省略（既存の実装を使用）
 
 	// アクセストークンの生成（15分有効）
-	accessToken, accessExpiry, err := generateToken(storedUser.Email, "access", 15)
+	accessToken, accessExpiry, err := uu.generateToken(storedUser.Email, "access", 15)
 	if err != nil {
 		return nil, err
 	}
 
 	// リフレッシュトークンの生成（7日間有効）
-	refreshToken, refreshExpiry, err := generateToken(storedUser.Email, "refresh", 24*7)
+	refreshToken, refreshExpiry, err := uu.generateToken(storedUser.Email, "refresh", 24*7)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (uu *userUsecase) VerifyToken(tokenString string) (*jwt.Token, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, jwt.ErrSignatureInvalid
 		}
-		return secretKey, nil
+		return uu.secretKey, nil
 	})
 
 	if err != nil {
@@ -138,8 +138,8 @@ func (uu *userUsecase) RefreshTokens(refreshToken string) (*model.TokenPair, err
 	return uu.Login(user)
 }
 
-// トークン生成のヘルパー関数
-func generateToken(email, tokenType string, expiryHours int) (string, time.Time, error) {
+// generateToken を userUsecase のメソッドに変更
+func (uu *userUsecase) generateToken(email, tokenType string, expiryHours int) (string, time.Time, error) {
 	expiryTime := time.Now().Add(time.Duration(expiryHours) * time.Hour)
 
 	claims := jwt.MapClaims{
@@ -149,7 +149,7 @@ func generateToken(email, tokenType string, expiryHours int) (string, time.Time,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(secretKey)
+	tokenString, err := token.SignedString(uu.secretKey)
 	if err != nil {
 		return "", time.Time{}, err
 	}

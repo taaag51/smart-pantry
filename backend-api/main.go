@@ -15,12 +15,10 @@ import (
 )
 
 func main() {
-	// プロジェクトルートの.envファイルを読み込む
-	envPath := filepath.Join("..", ".env")
-	if err := godotenv.Load(envPath); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+	// プロジェクトルートの .env ファイルを Overload で読み込み（上書き）
+	if err := godotenv.Overload(filepath.Join("..", ".env")); err != nil {
+		log.Println("Warning: project root .env file not loaded:", err)
 	}
-
 	db := db.NewDB()
 	userValidator := validator.NewUserValidator()
 
