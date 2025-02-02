@@ -1,4 +1,4 @@
-import React, { FC } from 'react'
+import React, { FC, useEffect } from 'react'
 import {
   BrowserRouter,
   Routes,
@@ -15,6 +15,7 @@ import { FoodList } from './components/FoodList'
 import { RecipeSuggestions } from './components/RecipeSuggestions'
 import { useAuth } from './hooks/useAuth'
 import { CircularProgress, Box } from '@mui/material'
+import { getCsrfToken } from './lib/axios'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -110,10 +111,26 @@ const AppRoutes: FC = () => {
   )
 }
 
+const CSRFInitializer: FC = () => {
+  useEffect(() => {
+    const initializeCsrf = async () => {
+      try {
+        await getCsrfToken()
+      } catch (error) {
+        console.error('Failed to initialize CSRF token:', error)
+      }
+    }
+    initializeCsrf()
+  }, [])
+
+  return null
+}
+
 const App: FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <CSRFInitializer />
         <AuthListener />
         <AppRoutes />
       </BrowserRouter>

@@ -11,8 +11,10 @@ interface ApiError {
 }
 
 interface LoginResponse {
-  token: string
   message: string
+  data: {
+    token: string
+  }
 }
 
 export const useMutateAuth = () => {
@@ -26,26 +28,43 @@ export const useMutateAuth = () => {
     Credential
   >({
     mutationFn: async (user: Credential) => {
-      await getCsrfToken()
-      return await axiosInstance.post<LoginResponse>('/login', user)
+      try {
+        // CSRFトークンを取得
+        await getCsrfToken()
+        // ログインリクエスト
+        return await axiosInstance.post<LoginResponse>('/login', user)
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message.includes('CSRF')) {
+            throw new Error(
+              'セキュリティトークンの取得に失敗しました。ページを再読み込みしてください。'
+            )
+          }
+        }
+        throw error
+      }
     },
     onSuccess: (res) => {
-      const token = res.data.token
+      const token = res.data.data.token
       if (token) {
         localStorage.setItem('accessToken', token)
         window.dispatchEvent(new CustomEvent('login-success'))
         navigate('/pantry', { replace: true })
       } else {
         console.error('No token in login response')
-        switchErrorHandling('ログインに失敗しました')
+        switchErrorHandling('ログインに失敗しました。もう一度お試しください。')
       }
     },
     onError: (err: AxiosError<ApiError>) => {
       console.error('Login error:', err)
-      if (err.response?.data.message) {
+      if (err.message.includes('CSRF')) {
+        switchErrorHandling(
+          'セキュリティトークンの取得に失敗しました。ページを再読み込みしてください。'
+        )
+      } else if (err.response?.data.message) {
         switchErrorHandling(err.response.data.message)
       } else {
-        switchErrorHandling('ログインに失敗しました')
+        switchErrorHandling('ログインに失敗しました。もう一度お試しください。')
       }
     },
   })
@@ -56,14 +75,33 @@ export const useMutateAuth = () => {
     Credential
   >({
     mutationFn: async (user: Credential) => {
-      await getCsrfToken()
-      return await axiosInstance.post('/signup', user)
+      try {
+        // CSRFトークンを取得
+        await getCsrfToken()
+        // アカウント登録リクエスト
+        return await axiosInstance.post('/signup', user)
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message.includes('CSRF')) {
+            throw new Error(
+              'セキュリティトークンの取得に失敗しました。ページを再読み込みしてください。'
+            )
+          }
+        }
+        throw error
+      }
     },
     onError: (err: AxiosError<ApiError>) => {
-      if (err.response?.data.message) {
+      if (err.message.includes('CSRF')) {
+        switchErrorHandling(
+          'セキュリティトークンの取得に失敗しました。ページを再読み込みしてください。'
+        )
+      } else if (err.response?.data.message) {
         switchErrorHandling(err.response.data.message)
       } else {
-        switchErrorHandling('アカウント作成に失敗しました')
+        switchErrorHandling(
+          'アカウント作成に失敗しました。もう一度お試しください。'
+        )
       }
     },
   })
@@ -71,8 +109,21 @@ export const useMutateAuth = () => {
   const logoutMutation = useMutation<AxiosResponse, AxiosError<ApiError>, void>(
     {
       mutationFn: async () => {
-        const result = await axiosInstance.post('/logout')
-        return result
+        try {
+          // CSRFトークンを取得
+          await getCsrfToken()
+          // ログアウトリクエスト
+          return await axiosInstance.post('/logout')
+        } catch (error) {
+          if (error instanceof Error) {
+            if (error.message.includes('CSRF')) {
+              throw new Error(
+                'セキュリティトークンの取得に失敗しました。ページを再読み込みしてください。'
+              )
+            }
+          }
+          throw error
+        }
       },
       onSuccess: () => {
         localStorage.removeItem('accessToken')

@@ -17,7 +17,7 @@ func NewRouter(uc controller.IUserController, fc controller.IFoodItemController,
 
 	// CORSミドルウェアの設定を修正
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:3000", os.Getenv("FRONTEND_URL")},
 		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token"},
 		ExposeHeaders:    []string{"X-CSRF-Token"},
@@ -28,15 +28,16 @@ func NewRouter(uc controller.IUserController, fc controller.IFoodItemController,
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		CookiePath:     "/",
 		CookieHTTPOnly: true,
-		CookieSameSite: http.SameSiteDefaultMode,
+		CookieSameSite: http.SameSiteLaxMode,
 		TokenLookup:    "header:X-CSRF-Token",
 	}))
 
-	// 認証関連
+	// 認証関連（認証不要なエンドポイント）
 	e.POST("/signup", uc.SignUp)
 	e.POST("/login", uc.LogIn)
 	e.POST("/logout", uc.LogOut)
 	e.GET("/csrf", uc.CsrfToken)
+	e.GET("/verify-token", uc.VerifyToken) // 認証不要なルートに移動
 
 	// JWT認証が必要なルート
 	api := e.Group("")
@@ -44,12 +45,11 @@ func NewRouter(uc controller.IUserController, fc controller.IFoodItemController,
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwt.MapClaims)
 		},
-		SigningKey:  []byte(os.Getenv("SECRET")),
-		TokenLookup: "cookie:token",
+		SigningKey:    []byte(os.Getenv("SECRET")),
+		TokenLookup:   "header:Authorization",
+		ContextKey:    "user",
+		SigningMethod: "HS256",
 	}))
-
-	// トークン検証エンドポイント
-	api.GET("/verify-token", uc.VerifyToken)
 
 	// 食材関連
 	foodItems := api.Group("/food-items")

@@ -1,117 +1,91 @@
-// Package response provides common HTTP response handling utilities for controllers
 package response
 
 import (
 	"net/http"
 	"time"
 
-	"github.com/taaag51/smart-pantry/backend-api/errors"
-
 	"github.com/labstack/echo/v4"
 )
 
-// ErrorResponse represents a standardized error response
+// レスポンス型の定義
 type ErrorResponse struct {
-	Type    string `json:"type"`
+	Type    string `json:"type,omitempty"`
 	Message string `json:"message"`
-	Code    int    `json:"code,omitempty"`
 }
 
-// SuccessResponse represents a standardized success response
 type SuccessResponse struct {
-	Message string      `json:"message,omitempty"`
+	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// Error sends a standardized error response
-func Error(c echo.Context, err error) error {
-	appErr := errors.AsAppError(err)
-	return c.JSON(appErr.HTTPStatus, ErrorResponse{
-		Type:    string(appErr.Type),
-		Message: appErr.Message,
-		Code:    appErr.HTTPStatus,
-	})
-}
-
-// Success sends a standardized success response
-func Success(c echo.Context, status int, data interface{}, message string) error {
-	return c.JSON(status, SuccessResponse{
-		Message: message,
-		Data:    data,
-	})
-}
-
-// BadRequest is a helper for 400 Bad Request responses
-func BadRequest(c echo.Context, message string) error {
-	return Error(c, errors.New(errors.ValidationError, message, http.StatusBadRequest, nil))
-}
-
-// Unauthorized is a helper for 401 Unauthorized responses
-func Unauthorized(c echo.Context, message string) error {
-	return Error(c, errors.New(errors.AuthenticationError, message, http.StatusUnauthorized, nil))
-}
-
-// NotFound is a helper for 404 Not Found responses
-func NotFound(c echo.Context, message string) error {
-	return Error(c, errors.New(errors.BusinessError, message, http.StatusNotFound, nil))
-}
-
-// InternalServerError is a helper for 500 Internal Server Error responses
-func InternalServerError(c echo.Context, err error) error {
-	return Error(c, errors.New(errors.BusinessError, "内部サーバーエラーが発生しました", http.StatusInternalServerError, err))
-}
-
-// CookieConfig contains configuration for HTTP cookies
-type CookieConfig struct {
+type AuthCookie struct {
 	Name     string
 	Value    string
-	Expires  time.Time
 	Path     string
-	Domain   string
-	Secure   bool
+	Expires  time.Time
 	HTTPOnly bool
 	SameSite http.SameSite
 }
 
-// DefaultCookieConfig returns the default cookie configuration
-func DefaultCookieConfig() CookieConfig {
-	return CookieConfig{
+func NewAuthCookie(token string, expires time.Time) *AuthCookie {
+	return &AuthCookie{
+		Name:     "token",
+		Value:    token,
 		Path:     "/",
-		Domain:   "localhost", // TODO: Make this configurable
-		Secure:   true,
+		Expires:  expires,
 		HTTPOnly: true,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: http.SameSiteLaxMode,
 	}
 }
 
-// SetCookie sets an HTTP cookie with the given configuration
-func SetCookie(c echo.Context, config CookieConfig) {
-	cookie := new(http.Cookie)
-	cookie.Name = config.Name
-	cookie.Value = config.Value
-	cookie.Expires = config.Expires
-	cookie.Path = config.Path
-	cookie.Domain = config.Domain
-	cookie.Secure = config.Secure
-	cookie.HttpOnly = config.HTTPOnly
-	cookie.SameSite = config.SameSite
-	c.SetCookie(cookie)
+func ClearAuthCookie() *AuthCookie {
+	return &AuthCookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Now().Add(-24 * time.Hour),
+		HTTPOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
 }
 
-// NewAuthCookie creates a new authentication cookie
-func NewAuthCookie(token string, expires time.Time) CookieConfig {
-	config := DefaultCookieConfig()
-	config.Name = "token"
-	config.Value = token
-	config.Expires = expires
-	return config
+func SetCookie(c echo.Context, cookie *AuthCookie) {
+	c.SetCookie(&http.Cookie{
+		Name:     cookie.Name,
+		Value:    cookie.Value,
+		Path:     cookie.Path,
+		Expires:  cookie.Expires,
+		HttpOnly: cookie.HTTPOnly,
+		SameSite: cookie.SameSite,
+	})
 }
 
-// ClearAuthCookie creates a cookie configuration that will clear the auth cookie
-func ClearAuthCookie() CookieConfig {
-	config := DefaultCookieConfig()
-	config.Name = "token"
-	config.Value = ""
-	config.Expires = time.Now()
-	return config
+// HandleError は共通のエラーレスポンスを生成します
+func HandleError(c echo.Context, status int, message string) error {
+	return c.JSON(status, ErrorResponse{
+		Message: message,
+	})
+}
+
+// HandleErrorWithType は型情報を含むエラーレスポンスを生成します
+func HandleErrorWithType(c echo.Context, status int, errorType string, message string) error {
+	return c.JSON(status, ErrorResponse{
+		Type:    errorType,
+		Message: message,
+	})
+}
+
+// HandleSuccess は共通の成功レスポンスを生成します
+func HandleSuccess(c echo.Context, status int, message string) error {
+	return c.JSON(status, SuccessResponse{
+		Message: message,
+	})
+}
+
+// HandleSuccessWithData はデータを含む成功レスポンスを生成します
+func HandleSuccessWithData(c echo.Context, status int, message string, data interface{}) error {
+	return c.JSON(status, SuccessResponse{
+		Message: message,
+		Data:    data,
+	})
 }
