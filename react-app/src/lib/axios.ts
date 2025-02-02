@@ -50,32 +50,52 @@ axiosInstance.interceptors.response.use(
 
     // 認証エラーの場合
     if (error.response.status === 401) {
-      // すでにリトライ済みの場合は、認証エラーとして処理
-      if (originalRequest._retry) {
+      // リフレッシュトークンの取得試行回数を追跡
+      if (!originalRequest._retryCount) {
+        originalRequest._retryCount = 0
+      }
+
+      // 最大リトライ回数を超えた場合は、認証エラーとして処理
+      if (
+        originalRequest._retryCount >= 1 ||
+        originalRequest.url === '/refresh-token'
+      ) {
         localStorage.removeItem('accessToken')
-        window.dispatchEvent(new CustomEvent('unauthorized'))
+        window.dispatchEvent(
+          new CustomEvent('unauthorized', {
+            detail: 'セッションが期限切れです。再度ログインしてください。',
+          })
+        )
         return Promise.reject(error)
       }
 
-      originalRequest._retry = true
+      originalRequest._retryCount++
 
       try {
         // リフレッシュトークンを使用して新しいアクセストークンを取得
         const response = await axiosInstance.post('/refresh-token')
-        const { accessToken } = response.data
+        const { data } = response.data
 
-        if (accessToken) {
-          localStorage.setItem('accessToken', accessToken)
+        if (data && data.accessToken) {
+          localStorage.setItem('accessToken', data.accessToken)
           axiosInstance.defaults.headers.common[
             'Authorization'
-          ] = `Bearer ${accessToken}`
-          originalRequest.headers['Authorization'] = `Bearer ${accessToken}`
+          ] = `Bearer ${data.accessToken}`
+          originalRequest.headers[
+            'Authorization'
+          ] = `Bearer ${data.accessToken}`
           return axiosInstance(originalRequest)
+        } else {
+          throw new Error('新しいアクセストークンの取得に失敗しました')
         }
       } catch (refreshError) {
         console.error('Token refresh failed:', refreshError)
         localStorage.removeItem('accessToken')
-        window.dispatchEvent(new CustomEvent('unauthorized'))
+        window.dispatchEvent(
+          new CustomEvent('unauthorized', {
+            detail: 'トークンの更新に失敗しました。再度ログインしてください。',
+          })
+        )
         return Promise.reject(error)
       }
     }

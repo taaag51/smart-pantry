@@ -148,13 +148,23 @@ func (uc *userController) RefreshToken(c echo.Context) error {
 	// リフレッシュトークンをCookieから取得
 	refreshCookie, err := c.Cookie("refresh_token")
 	if err != nil {
-		return response.HandleError(c, http.StatusUnauthorized, "リフレッシュトークンが見つかりません")
+		return response.HandleError(c, http.StatusUnauthorized, "リフレッシュトークンが見つかりません。再度ログインしてください。")
+	}
+
+	if refreshCookie.Value == "" {
+		return response.HandleError(c, http.StatusUnauthorized, "無効なリフレッシュトークンです。再度ログインしてください。")
 	}
 
 	// リフレッシュトークンを使用して新しいトークンペアを生成
 	tokenPair, err := uc.uu.RefreshTokens(refreshCookie.Value)
 	if err != nil {
-		return response.HandleError(c, http.StatusUnauthorized, "トークンの更新に失敗しました")
+		if err == jwt.ErrTokenExpired {
+			return response.HandleError(c, http.StatusUnauthorized, "リフレッシュトークンが期限切れです。再度ログインしてください。")
+		} else if err == jwt.ErrSignatureInvalid {
+			return response.HandleError(c, http.StatusUnauthorized, "無効なリフレッシュトークンです。再度ログインしてください。")
+		} else {
+			return response.HandleError(c, http.StatusUnauthorized, "トークンの更新に失敗しました。再度ログインしてください。")
+		}
 	}
 
 	// 新しいアクセストークンをCookieに設定
@@ -175,9 +185,10 @@ func (uc *userController) RefreshToken(c echo.Context) error {
 	})
 
 	return response.HandleSuccessWithData(c, http.StatusOK, "トークンを更新しました", &model.TokenResponse{
-		AccessToken: tokenPair.AccessToken,
-		TokenType:   "Bearer",
-		ExpiresIn:   int(time.Until(tokenPair.AccessExpiry).Seconds()),
-		ExpiresAt:   tokenPair.AccessExpiry,
+		AccessToken:  tokenPair.AccessToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    int(time.Until(tokenPair.AccessExpiry).Seconds()),
+		ExpiresAt:    tokenPair.AccessExpiry,
+		RefreshToken: tokenPair.RefreshToken,
 	})
 }
