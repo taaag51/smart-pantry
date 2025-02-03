@@ -1,13 +1,15 @@
 package controller
 
 import (
-	"go-rest-api/model"
-	"go-rest-api/usecase"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/taaag51/smart-pantry/backend-api/usecase"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+	"github.com/taaag51/smart-pantry/backend-api/model"
 )
 
 /**
@@ -46,6 +48,15 @@ func NewFoodItemController(fu usecase.IFoodItemUsecase) IFoodItemController {
 }
 
 /**
+ * エラーハンドリング用のヘルパー関数
+ */
+func handleError(c echo.Context, statusCode int, message string) error {
+	return c.JSON(statusCode, Response{
+		Message: message,
+	})
+}
+
+/**
  * 全ての食材を取得
  * @param c コンテキスト
  * @return エラー
@@ -53,9 +64,7 @@ func NewFoodItemController(fu usecase.IFoodItemUsecase) IFoodItemController {
 func (fc *foodItemController) GetAllFoodItems(c echo.Context) error {
 	foodItems, err := fc.fu.GetAllFoodItems()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{
-			Message: err.Error(),
-		})
+		return handleError(c, http.StatusInternalServerError, "食材の取得に失敗しました")
 	}
 	return c.JSON(http.StatusOK, Response{
 		Data: foodItems,
@@ -71,16 +80,12 @@ func (fc *foodItemController) GetFoodItemById(c echo.Context) error {
 	id := c.Param("id")
 	foodItemId, err := strconv.Atoi(id)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, Response{
-			Message: "Invalid ID format",
-		})
+		return handleError(c, http.StatusBadRequest, "無効なID形式です")
 	}
 
 	foodItem, err := fc.fu.GetFoodItemById(uint(foodItemId))
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{
-			Message: err.Error(),
-		})
+		return handleError(c, http.StatusInternalServerError, "食材の取得に失敗しました")
 	}
 	return c.JSON(http.StatusOK, Response{
 		Data: foodItem,
@@ -95,22 +100,36 @@ func (fc *foodItemController) GetFoodItemById(c echo.Context) error {
 func (fc *foodItemController) CreateFoodItem(c echo.Context) error {
 	foodItem := model.FoodItem{}
 	if err := c.Bind(&foodItem); err != nil {
-		return c.JSON(http.StatusBadRequest, Response{
-			Message: "Invalid request format",
-		})
+		return handleError(c, http.StatusBadRequest, fmt.Sprintf("リクエスト形式が無効です: %v", err))
 	}
 
 	// JWTトークンからユーザーIDを取得
-	user := c.Get("user").(*jwt.Token)
-	claims := user.Claims.(*jwt.MapClaims)
-	userId := uint((*claims)["user_id"].(float64))
+	user := c.Get("user")
+	if user == nil {
+		return handleError(c, http.StatusBadRequest, "ユーザー情報が取得できません")
+	}
+
+	token, ok := user.(*jwt.Token)
+	if !ok {
+		return handleError(c, http.StatusBadRequest, "トークンの形式が無効です")
+	}
+
+	claims, ok := token.Claims.(*jwt.MapClaims)
+	if !ok {
+		return handleError(c, http.StatusBadRequest, "クレームの形式が無効です")
+	}
+
+	userIdFloat, ok := (*claims)["user_id"].(float64)
+	if !ok {
+		return handleError(c, http.StatusBadRequest, "ユーザーIDの形式が無効です")
+	}
+
+	userId := uint(userIdFloat)
 	foodItem.UserId = userId
 
 	createdFoodItem, err := fc.fu.CreateFoodItem(foodItem)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{
-			Message: err.Error(),
-		})
+		return handleError(c, http.StatusInternalServerError, "食材の作成に失敗しました")
 	}
 	return c.JSON(http.StatusCreated, Response{
 		Data:    createdFoodItem,
@@ -126,25 +145,19 @@ func (fc *foodItemController) CreateFoodItem(c echo.Context) error {
 func (fc *foodItemController) UpdateFoodItem(c echo.Context) error {
 	foodItem := model.FoodItem{}
 	if err := c.Bind(&foodItem); err != nil {
-		return c.JSON(http.StatusBadRequest, Response{
-			Message: "Invalid request format",
-		})
+		return handleError(c, http.StatusBadRequest, "リクエスト形式が無効です")
 	}
 
 	// IDの存在確認
 	id := c.Param("id")
 	foodItemId, err := strconv.Atoi(id)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, Response{
-			Message: "Invalid ID format",
-		})
+		return handleError(c, http.StatusBadRequest, "無効なID形式です")
 	}
 	foodItem.ID = uint(foodItemId)
 
 	if err := fc.fu.UpdateFoodItem(foodItem); err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{
-			Message: err.Error(),
-		})
+		return handleError(c, http.StatusInternalServerError, "食材の更新に失敗しました")
 	}
 	return c.JSON(http.StatusOK, Response{
 		Data:    foodItem,
@@ -161,15 +174,11 @@ func (fc *foodItemController) DeleteFoodItem(c echo.Context) error {
 	id := c.Param("id")
 	foodItemId, err := strconv.Atoi(id)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, Response{
-			Message: "Invalid ID format",
-		})
+		return handleError(c, http.StatusBadRequest, "無効なID形式です")
 	}
 
 	if err := fc.fu.DeleteFoodItem(uint(foodItemId)); err != nil {
-		return c.JSON(http.StatusInternalServerError, Response{
-			Message: err.Error(),
-		})
+		return handleError(c, http.StatusInternalServerError, "食材の削除に失敗しました")
 	}
 	return c.JSON(http.StatusOK, Response{
 		Message: "Food item deleted successfully",

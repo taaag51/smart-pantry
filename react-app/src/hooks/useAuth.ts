@@ -1,56 +1,55 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import axiosInstance from '../lib/axios'
+import useStore from '../store'
 
 export const useAuth = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const navigate = useNavigate()
+  const { isAuthenticated, setAuth, clearAuth } = useStore()
   const [isLoading, setIsLoading] = useState(true)
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
+    const token = localStorage.getItem('accessToken')
+
+    if (!token) {
+      clearAuth()
+      setIsLoading(false)
+      return
+    }
+
     try {
       await axiosInstance.get('/verify-token')
-      setIsAuthenticated(true)
+      setAuth(token)
     } catch (error) {
       console.error('Token verification failed:', error)
-      setIsAuthenticated(false)
-      window.dispatchEvent(new CustomEvent('unauthorized'))
+      clearAuth()
+      navigate('/', { replace: true })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [clearAuth, setAuth, navigate])
 
   useEffect(() => {
-    // 初回認証チェック
     checkAuth()
 
-    // 定期的な認証チェック（5分ごと）
-    const interval = setInterval(checkAuth, 5 * 60 * 1000)
+    const interval = setInterval(checkAuth, 15 * 60 * 1000)
 
     const handleUnauthorized = () => {
-      setIsAuthenticated(false)
-      setIsLoading(false)
-    }
-
-    const handleLoginSuccess = () => {
-      setIsAuthenticated(true)
-      setIsLoading(false)
-    }
-
-    const handleLogoutSuccess = () => {
-      setIsAuthenticated(false)
-      setIsLoading(false)
+      clearAuth()
+      navigate('/', { replace: true })
     }
 
     window.addEventListener('unauthorized', handleUnauthorized)
-    window.addEventListener('login-success', handleLoginSuccess)
-    window.addEventListener('logout-success', handleLogoutSuccess)
 
     return () => {
       clearInterval(interval)
       window.removeEventListener('unauthorized', handleUnauthorized)
-      window.removeEventListener('login-success', handleLoginSuccess)
-      window.removeEventListener('logout-success', handleLogoutSuccess)
     }
-  }, [])
+  }, [checkAuth, clearAuth, navigate])
 
-  return { isAuthenticated, isLoading }
+  return {
+    isAuthenticated,
+    isLoading,
+    checkAuth,
+  }
 }

@@ -1,8 +1,9 @@
 package controller
 
 import (
-	"go-rest-api/usecase"
 	"net/http"
+
+	"github.com/taaag51/smart-pantry/backend-api/usecase"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
@@ -28,9 +29,7 @@ func (rc *recipeController) GetRecipeSuggestions(c echo.Context) error {
 	// レシピ提案を取得
 	suggestions, err := rc.ru.GetRecipeSuggestions(userId)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "レシピの提案に失敗しました",
-		})
+		return handleError(c, http.StatusInternalServerError, "レシピの提案に失敗しました")
 	}
 
 	return c.JSON(http.StatusOK, []string{suggestions})

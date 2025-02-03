@@ -36,3 +36,6 @@ frontend/node_modules
 .clinerules
 commit_message.txt
 repomix-output.txt
+pull_request_message.txt
+backend-api/.env.rename
+backend-api/.env.test.rename

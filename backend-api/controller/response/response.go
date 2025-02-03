@@ -1,116 +1,70 @@
-// Package response provides common HTTP response handling utilities for controllers
 package response
 
 import (
-	"go-rest-api/errors"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
 )
 
-// ErrorResponse represents a standardized error response
-type ErrorResponse struct {
-	Type    string `json:"type"`
-	Message string `json:"message"`
-	Code    int    `json:"code,omitempty"`
-}
-
-// SuccessResponse represents a standardized success response
-type SuccessResponse struct {
-	Message string      `json:"message,omitempty"`
+type Response struct {
+	Status  string      `json:"status"`
+	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// Error sends a standardized error response
-func Error(c echo.Context, err error) error {
-	appErr := errors.AsAppError(err)
-	return c.JSON(appErr.HTTPStatus, ErrorResponse{
-		Type:    string(appErr.Type),
-		Message: appErr.Message,
-		Code:    appErr.HTTPStatus,
+// SetCookie はクッキーを設定する
+func SetCookie(c echo.Context, cookie *http.Cookie) {
+	http.SetCookie(c.Response(), cookie)
+}
+
+// NewAuthCookie は新しい認証用クッキーを作成する
+func NewAuthCookie(token string, expires time.Time) *http.Cookie {
+	return &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Expires:  expires,
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+}
+
+// ClearAuthCookie は認証用クッキーをクリアする
+func ClearAuthCookie() *http.Cookie {
+	return &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Expires:  time.Now().Add(-24 * time.Hour),
+		Path:     "/",
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+}
+
+// HandleSuccess は成功レスポンスを返す
+func HandleSuccess(c echo.Context, status int, message string) error {
+	return c.JSON(status, Response{
+		Status:  "success",
+		Message: message,
 	})
 }
 
-// Success sends a standardized success response
-func Success(c echo.Context, status int, data interface{}, message string) error {
-	return c.JSON(status, SuccessResponse{
+// HandleSuccessWithData は成功レスポンスとデータを返す
+func HandleSuccessWithData(c echo.Context, status int, message string, data interface{}) error {
+	return c.JSON(status, Response{
+		Status:  "success",
 		Message: message,
 		Data:    data,
 	})
 }
 
-// BadRequest is a helper for 400 Bad Request responses
-func BadRequest(c echo.Context, message string) error {
-	return Error(c, errors.New(errors.ValidationError, message, http.StatusBadRequest, nil))
-}
-
-// Unauthorized is a helper for 401 Unauthorized responses
-func Unauthorized(c echo.Context, message string) error {
-	return Error(c, errors.New(errors.AuthenticationError, message, http.StatusUnauthorized, nil))
-}
-
-// NotFound is a helper for 404 Not Found responses
-func NotFound(c echo.Context, message string) error {
-	return Error(c, errors.New(errors.BusinessError, message, http.StatusNotFound, nil))
-}
-
-// InternalServerError is a helper for 500 Internal Server Error responses
-func InternalServerError(c echo.Context, err error) error {
-	return Error(c, errors.New(errors.BusinessError, "内部サーバーエラーが発生しました", http.StatusInternalServerError, err))
-}
-
-// CookieConfig contains configuration for HTTP cookies
-type CookieConfig struct {
-	Name     string
-	Value    string
-	Expires  time.Time
-	Path     string
-	Domain   string
-	Secure   bool
-	HTTPOnly bool
-	SameSite http.SameSite
-}
-
-// DefaultCookieConfig returns the default cookie configuration
-func DefaultCookieConfig() CookieConfig {
-	return CookieConfig{
-		Path:     "/",
-		Domain:   "localhost", // TODO: Make this configurable
-		Secure:   true,
-		HTTPOnly: true,
-		SameSite: http.SameSiteNoneMode,
-	}
-}
-
-// SetCookie sets an HTTP cookie with the given configuration
-func SetCookie(c echo.Context, config CookieConfig) {
-	cookie := new(http.Cookie)
-	cookie.Name = config.Name
-	cookie.Value = config.Value
-	cookie.Expires = config.Expires
-	cookie.Path = config.Path
-	cookie.Domain = config.Domain
-	cookie.Secure = config.Secure
-	cookie.HttpOnly = config.HTTPOnly
-	cookie.SameSite = config.SameSite
-	c.SetCookie(cookie)
-}
-
-// NewAuthCookie creates a new authentication cookie
-func NewAuthCookie(token string, expires time.Time) CookieConfig {
-	config := DefaultCookieConfig()
-	config.Name = "token"
-	config.Value = token
-	config.Expires = expires
-	return config
-}
-
-// ClearAuthCookie creates a cookie configuration that will clear the auth cookie
-func ClearAuthCookie() CookieConfig {
-	config := DefaultCookieConfig()
-	config.Name = "token"
-	config.Value = ""
-	config.Expires = time.Now()
-	return config
+// HandleError はエラーレスポンスを返す
+func HandleError(c echo.Context, status int, message string) error {
+	return c.JSON(status, Response{
+		Status:  "error",
+		Message: message,
+	})
 }

@@ -1,8 +1,8 @@
 package usecase
 
 import (
-	"go-rest-api/model"
-	"go-rest-api/repository"
+	"github.com/taaag51/smart-pantry/backend-api/model"
+	"github.com/taaag51/smart-pantry/backend-api/repository"
 )
 
 type IFoodItemUsecase interface {

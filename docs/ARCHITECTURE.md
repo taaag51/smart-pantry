@@ -1,137 +1,201 @@
-# スマートパントリーアプリケーション アーキテクチャ設計
+# 認証システムのアーキテクチャ改善案
 
-## 概要
+## 現状の課題
 
-このアプリケーションは、食材管理を効率化するための Web アプリケーションです。
-フロントエンドは React、バックエンドは Go 言語で実装されています。
+### 1. 認証フローの問題
 
-## アーキテクチャの特徴
+- トークン検証時の無限ループ
+- トークン更新ロジックの複雑さ
+- 認証状態管理の重複
 
-### フロントエンド（React + TypeScript）
+### 2. セキュリティの課題
 
-#### コンポーネント設計
+- トークンの有効期限管理が不明確
+- リフレッシュトークンの仕組みが未実装
+- CSRF トークンと JWT の関係が不明確
 
-1. **プレゼンテーショナルコンポーネント**
+## 改善案
 
-   - UI の表示に特化
-   - ビジネスロジックを含まない
-   - 例：`FoodItemForm.tsx`
+### 1. 認証フローの改善
 
-2. **カスタムフック**
-   - ビジネスロジックの分離
-   - 再利用可能な状態管理
-   - 例：`useFoodItemForm.ts`, `useMutateFoodItem.ts`
+#### フロントエンド（React）
 
-#### 状態管理
+```typescript
+// 改善後のaxiosインターセプター
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (!error.response || error.response.status !== 401) {
+      return Promise.reject(error);
+    }
 
-- React Query による効率的なサーバー状態管理
-- ローカル状態は React の useState を使用
-- キャッシュの最適化
+    const originalRequest = error.config;
+    if (originalRequest._retry) {
+      // すでにリトライ済みの場合は、ログアウト処理を実行
+      localStorage.removeItem("accessToken");
+      window.dispatchEvent(new CustomEvent("unauthorized"));
+      return Promise.reject(error);
+    }
 
-### バックエンド（Go + Echo）
+    try {
+      originalRequest._retry = true;
+      const response = await axiosInstance.post("/refresh-token");
+      const { accessToken } = response.data;
 
-#### レイヤードアーキテクチャ
+      if (accessToken) {
+        localStorage.setItem("accessToken", accessToken);
+        axiosInstance.defaults.headers.common[
+          "Authorization"
+        ] = `Bearer ${accessToken}`;
+        originalRequest.headers["Authorization"] = `Bearer ${accessToken}`;
+        return axiosInstance(originalRequest);
+      }
+    } catch (refreshError) {
+      localStorage.removeItem("accessToken");
+      window.dispatchEvent(new CustomEvent("unauthorized"));
+      return Promise.reject(refreshError);
+    }
+  }
+);
+```
 
-1. **コントローラー層**
+#### バックエンド（Go）
 
-   - HTTP リクエストのハンドリング
-   - バリデーション
-   - レスポンス形式の統一
+```go
+// トークン管理の改善
+type TokenPair struct {
+    AccessToken    string
+    RefreshToken   string
+    AccessExpiry   time.Time
+    RefreshExpiry  time.Time
+}
 
-   ```go
-   type Response struct {
-       Data    interface{} `json:"data"`
-       Message string      `json:"message,omitempty"`
-   }
-   ```
+// トークン生成の改善
+func (uc *userController) GenerateTokenPair(user model.User) (*TokenPair, error) {
+    accessToken, accessExpiry, err := uc.generateAccessToken(user)
+    if err != nil {
+        return nil, err
+    }
 
-2. **ユースケース層**
+    refreshToken, refreshExpiry, err := uc.generateRefreshToken(user)
+    if err != nil {
+        return nil, err
+    }
 
-   - ビジネスロジックの実装
-   - トランザクション管理
+    return &TokenPair{
+        AccessToken:    accessToken,
+        RefreshToken:   refreshToken,
+        AccessExpiry:   accessExpiry,
+        RefreshExpiry:  refreshExpiry,
+    }, nil
+}
+```
 
-3. **リポジトリ層**
-   - データベースアクセス
-   - データの永続化
+### 2. アーキテクチャの改善点
 
-## データフロー
+#### トークン管理の一元化
 
-### 食材追加の例
+- アクセストークン（短期）とリフレッシュトークン（長期）の分離
+- トークンの状態管理をカスタムフックに集約
+- トークンの更新ロジックの明確化
 
-1. ユーザーが食材フォームに入力
-2. `FoodItemForm` コンポーネントが入力を受け取る
-3. `useFoodItemForm` フックがバリデーションを実行
-4. `useMutateFoodItem` フックが API リクエストを送信
-5. バックエンドの `FoodItemController` がリクエストを受信
-6. ユースケース層でビジネスロジックを実行
-7. データベースに保存
-8. レスポンスをフロントエンドに返却
-9. React Query がキャッシュを更新
-10. UI が自動的に更新
+#### エラーハンドリングの改善
 
-## エラーハンドリング
-
-### フロントエンド
-
-- カスタムフックによる一元化されたエラー処理
+- エラー種別の明確な定義
+- 一貫性のあるエラーレスポンス
 - ユーザーフレンドリーなエラーメッセージ
-- フォームバリデーション
 
-### バックエンド
+#### セキュリティの強化
 
-- 統一されたエラーレスポンス形式
-- 適切な HTTP ステータスコードの使用
-- 詳細なエラーメッセージ
+- トークンのローテーション
+- リフレッシュトークンの再利用検知
+- 適切なトークン有効期限の設定
 
-## セキュリティ
+### 3. 実装手順
 
-- JWT による認証
-- CSRF トークンの使用
-- 入力値のバリデーション
-- SQL インジェクション対策
+1. バックエンドの改善
 
-## パフォーマンス最適化
+   - リフレッシュトークンエンドポイントの実装
+   - トークン検証ロジックの改善
+   - エラーハンドリングの統一
 
-### フロントエンド
+2. フロントエンドの改善
 
-- React Query によるキャッシュ管理
-- 必要最小限のレンダリング
-- コンポーネントの適切な分割
+   - 認証状態管理の一元化
+   - トークン更新ロジックの実装
+   - エラーハンドリングの改善
 
-### バックエンド
+3. セキュリティ強化
+   - CSRF トークンの適切な管理
+   - トークンのセキュアな保存
+   - 適切な CORS 設定
 
-- データベースクエリの最適化
-- キャッシュの活用
-- 効率的なルーティング
+### 4. 新しい認証フロー
 
-## 開発ガイドライン
+1. ログイン時
 
-1. **コンポーネント作成**
+   - ユーザー認証
+   - アクセストークンとリフレッシュトークンの発行
+   - セキュアなトークン保存
 
-   - 単一責任の原則に従う
-   - プレゼンテーショナルとコンテナの分離
-   - 適切なコメント付与
+2. API リクエスト時
 
-2. **カスタムフック作成**
+   - アクセストークンの検証
+   - 必要に応じてリフレッシュトークンによる更新
+   - エラー時の適切なハンドリング
 
-   - ロジックの再利用性を重視
-   - 明確な命名規則
-   - 型定義の徹底
+3. ログアウト時
+   - トークンの無効化
+   - セッションのクリーンアップ
+   - 状態のリセット
 
-3. **API エンドポイント作成**
+## 推奨設定
 
-   - RESTful 原則に従う
-   - 統一されたレスポンス形式
-   - 適切なエラーハンドリング
+### トークンの有効期限
 
-4. **テスト**
-   - ユニットテストの作成
-   - インテグレーションテスト
-   - E2E テスト
+- アクセストークン: 15 分
+- リフレッシュトークン: 7 日
 
-## 今後の改善点
+### セキュリティヘッダー
 
-1. キャッシュ戦略の最適化
-2. パフォーマンスモニタリングの導入
-3. エラーログの集中管理
-4. CI/CD パイプラインの強化
+```go
+e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+    XSSProtection:         "1; mode=block",
+    ContentTypeNosniff:    "nosniff",
+    XFrameOptions:         "SAMEORIGIN",
+    HSTSMaxAge:           31536000,
+    HSTSPreloadEnabled:    true,
+}))
+```
+
+### CORS 設定の最適化
+
+```go
+e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+    AllowOrigins:     []string{"http://localhost:3000", os.Getenv("FRONTEND_URL")},
+    AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete},
+    AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token"},
+    ExposeHeaders:    []string{"X-CSRF-Token"},
+    AllowCredentials: true,
+    MaxAge:           3600,
+}))
+```
+
+## 移行計画
+
+1. バックエンド更新
+
+   - リフレッシュトークンの実装
+   - トークン検証の改善
+   - エラーハンドリングの統一
+
+2. フロントエンド更新
+
+   - 認証フックの改善
+   - トークン管理の一元化
+   - エラーハンドリングの実装
+
+3. テストとデプロイ
+   - 単体テストの追加
+   - E2E テストの実装
+   - 段階的なデプロイ

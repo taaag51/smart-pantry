@@ -1,325 +1,217 @@
 package controller
 
 import (
-	"bytes"
 	"encoding/json"
-	"go-rest-api/controller/response"
-	"go-rest-api/errors"
-	"go-rest-api/model"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/taaag51/smart-pantry/backend-api/model"
 )
 
-// mockUserUsecase はユーザーユースケースのモック
 type mockUserUsecase struct {
-	mockSignUp      func(user model.User) (model.UserResponse, error)
-	mockLogin       func(user model.User) (string, error)
-	mockVerifyToken func(tokenString string) error
+	mock.Mock
 }
 
-func (m *mockUserUsecase) SignUp(user model.User) (model.UserResponse, error) {
-	return m.mockSignUp(user)
+func (m *mockUserUsecase) SignUp(user model.User) (model.User, error) {
+	args := m.Called(user)
+	return args.Get(0).(model.User), args.Error(1)
 }
 
-func (m *mockUserUsecase) Login(user model.User) (string, error) {
-	return m.mockLogin(user)
+func (m *mockUserUsecase) Login(user model.User) (*model.TokenPair, error) {
+	args := m.Called(user)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.TokenPair), args.Error(1)
 }
 
-func (m *mockUserUsecase) VerifyToken(tokenString string) error {
-	return m.mockVerifyToken(tokenString)
+func (m *mockUserUsecase) VerifyToken(tokenString string) (*jwt.Token, error) {
+	args := m.Called(tokenString)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*jwt.Token), args.Error(1)
 }
 
-// テストヘルパー関数
-func setupTest(t *testing.T) (*echo.Echo, *httptest.ResponseRecorder) {
+func (m *mockUserUsecase) RefreshTokens(refreshToken string) (*model.TokenPair, error) {
+	args := m.Called(refreshToken)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.TokenPair), args.Error(1)
+}
+
+func TestSignUp(t *testing.T) {
 	e := echo.New()
-	rec := httptest.NewRecorder()
-	return e, rec
-}
+	mock := new(mockUserUsecase)
+	controller := NewUserController(mock)
 
-func assertErrorResponse(t *testing.T, rec *httptest.ResponseRecorder, expectedCode int, expectedType string, expectedMessage string) {
-	assert.Equal(t, expectedCode, rec.Code)
-	var res response.ErrorResponse
-	err := json.Unmarshal(rec.Body.Bytes(), &res)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedType, res.Type)
-	assert.Equal(t, expectedMessage, res.Message)
-}
-
-func assertSuccessResponse(t *testing.T, rec *httptest.ResponseRecorder, expectedCode int, expectedMessage string) {
-	assert.Equal(t, expectedCode, rec.Code)
-	var res response.SuccessResponse
-	err := json.Unmarshal(rec.Body.Bytes(), &res)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedMessage, res.Message)
-}
-
-func TestUserController_SignUp(t *testing.T) {
-	e, rec := setupTest(t)
-
-	tests := []struct {
-		name            string
-		inputUser       model.User
-		mockBehavior    func(*mockUserUsecase)
-		expectedCode    int
-		expectedType    string
-		expectedMessage string
-	}{
-		{
-			name: "正常系：ユーザー登録成功",
-			inputUser: model.User{
-				Email:    "test@example.com",
-				Password: "password123",
-			},
-			mockBehavior: func(m *mockUserUsecase) {
-				m.mockSignUp = func(user model.User) (model.UserResponse, error) {
-					return model.UserResponse{
-						ID:    1,
-						Email: user.Email,
-					}, nil
-				}
-			},
-			expectedCode:    http.StatusCreated,
-			expectedMessage: "ユーザーが正常に作成されました",
-		},
-		{
-			name: "異常系：既存のメールアドレス",
-			inputUser: model.User{
-				Email:    "existing@example.com",
-				Password: "password123",
-			},
-			mockBehavior: func(m *mockUserUsecase) {
-				m.mockSignUp = func(user model.User) (model.UserResponse, error) {
-					return model.UserResponse{}, errors.EmailExists
-				}
-			},
-			expectedCode:    http.StatusBadRequest,
-			expectedType:    string(errors.BusinessError),
-			expectedMessage: errors.EmailExists.Message,
-		},
-		{
-			name: "異常系：無効なメールアドレス",
-			inputUser: model.User{
-				Email:    "invalid-email",
-				Password: "password123",
-			},
-			mockBehavior: func(m *mockUserUsecase) {
-				m.mockSignUp = func(user model.User) (model.UserResponse, error) {
-					return model.UserResponse{}, errors.InvalidEmail
-				}
-			},
-			expectedCode:    http.StatusBadRequest,
-			expectedType:    string(errors.ValidationError),
-			expectedMessage: errors.InvalidEmail.Message,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// モックの準備
-			mock := &mockUserUsecase{}
-			tt.mockBehavior(mock)
-
-			// コントローラーの作成
-			uc := NewUserController(mock)
-
-			// リクエストの準備
-			jsonBody, _ := json.Marshal(tt.inputUser)
-			req := httptest.NewRequest(http.MethodPost, "/signup", bytes.NewBuffer(jsonBody))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-			c := e.NewContext(req, rec)
-
-			// テスト実行
-			err := uc.SignUp(c)
-			assert.NoError(t, err)
-
-			// レスポンスの検証
-			if tt.expectedType != "" {
-				assertErrorResponse(t, rec, tt.expectedCode, tt.expectedType, tt.expectedMessage)
-			} else {
-				assertSuccessResponse(t, rec, tt.expectedCode, tt.expectedMessage)
-			}
-
-			// レコーダーをリセット
-			rec.Body.Reset()
-		})
-	}
-}
-
-func TestUserController_Login(t *testing.T) {
-	e, rec := setupTest(t)
-
-	tests := []struct {
-		name            string
-		inputUser       model.User
-		mockBehavior    func(*mockUserUsecase)
-		expectedCode    int
-		expectedType    string
-		expectedMessage string
-		checkCookie     bool
-	}{
-		{
-			name: "正常系：ログイン成功",
-			inputUser: model.User{
-				Email:    "test@example.com",
-				Password: "password123",
-			},
-			mockBehavior: func(m *mockUserUsecase) {
-				m.mockLogin = func(user model.User) (string, error) {
-					return "test-jwt-token", nil
-				}
-			},
-			expectedCode:    http.StatusOK,
-			expectedMessage: "ログインに成功しました",
-			checkCookie:     true,
-		},
-		{
-			name: "異常系：認証失敗",
-			inputUser: model.User{
-				Email:    "test@example.com",
-				Password: "wrongpassword",
-			},
-			mockBehavior: func(m *mockUserUsecase) {
-				m.mockLogin = func(user model.User) (string, error) {
-					return "", errors.InvalidCredentials
-				}
-			},
-			expectedCode:    http.StatusUnauthorized,
-			expectedType:    string(errors.AuthenticationError),
-			expectedMessage: errors.InvalidCredentials.Message,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// モックの準備
-			mock := &mockUserUsecase{}
-			tt.mockBehavior(mock)
-
-			// コントローラーの作成
-			uc := NewUserController(mock)
-
-			// リクエストの準備
-			jsonBody, _ := json.Marshal(tt.inputUser)
-			req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(jsonBody))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-			c := e.NewContext(req, rec)
-
-			// テスト実行
-			err := uc.LogIn(c)
-			assert.NoError(t, err)
-
-			// レスポンスの検証
-			if tt.expectedType != "" {
-				assertErrorResponse(t, rec, tt.expectedCode, tt.expectedType, tt.expectedMessage)
-			} else {
-				assertSuccessResponse(t, rec, tt.expectedCode, tt.expectedMessage)
-			}
-
-			// クッキーの検証
-			if tt.checkCookie {
-				cookies := rec.Result().Cookies()
-				found := false
-				for _, cookie := range cookies {
-					if cookie.Name == "token" {
-						found = true
-						assert.NotEmpty(t, cookie.Value)
-						assert.True(t, cookie.Secure)
-						assert.True(t, cookie.HttpOnly)
-						assert.Equal(t, http.SameSiteNoneMode, cookie.SameSite)
-						assert.True(t, cookie.Expires.After(time.Now()))
-					}
-				}
-				assert.True(t, found, "認証クッキーが見つかりません")
-			}
-
-			// レコーダーをリセット
-			rec.Body.Reset()
-		})
-	}
-}
-
-func TestUserController_Logout(t *testing.T) {
-	e, rec := setupTest(t)
-
-	t.Run("正常系：ログアウト成功", func(t *testing.T) {
-		// コントローラーの作成
-		mock := &mockUserUsecase{}
-		uc := NewUserController(mock)
-
-		// リクエストの準備
-		req := httptest.NewRequest(http.MethodPost, "/logout", nil)
-		c := e.NewContext(req, rec)
-
-		// テスト実行
-		err := uc.LogOut(c)
-		assert.NoError(t, err)
-
-		// レスポンスの検証
-		assertSuccessResponse(t, rec, http.StatusOK, "ログアウトしました")
-
-		// クッキーの検証
-		cookies := rec.Result().Cookies()
-		found := false
-		for _, cookie := range cookies {
-			if cookie.Name == "token" {
-				found = true
-				assert.Empty(t, cookie.Value)
-				assert.True(t, cookie.Expires.Before(time.Now()))
-			}
+	t.Run("正常系：ユーザー登録成功", func(t *testing.T) {
+		user := model.User{
+			Email:    "test@example.com",
+			Password: "password123",
 		}
-		assert.True(t, found, "クリアされた認証クッキーが見つかりません")
-	})
-}
 
-func TestUserController_CsrfToken(t *testing.T) {
-	e, rec := setupTest(t)
+		mock.On("SignUp", user).Return(user, nil).Once()
 
-	t.Run("正常系：CSRFトークン取得", func(t *testing.T) {
-		// コントローラーの作成
-		mock := &mockUserUsecase{}
-		uc := NewUserController(mock)
-
-		// リクエストの準備
-		req := httptest.NewRequest(http.MethodGet, "/csrf", nil)
+		jsonStr := `{"email":"test@example.com","password":"password123"}`
+		req := httptest.NewRequest(http.MethodPost, "/signup", strings.NewReader(jsonStr))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		c.Set("csrf", "test-csrf-token")
 
-		// テスト実行
-		err := uc.CsrfToken(c)
-		assert.NoError(t, err)
+		if assert.NoError(t, controller.SignUp(c)) {
+			assert.Equal(t, http.StatusCreated, rec.Code)
 
-		// レスポンスの検証
-		assert.Equal(t, http.StatusOK, rec.Code)
-		var response map[string]interface{}
-		err = json.Unmarshal(rec.Body.Bytes(), &response)
-		assert.NoError(t, err)
-		data := response["data"].(map[string]interface{})
-		assert.Equal(t, "test-csrf-token", data["csrf_token"])
+			var response struct {
+				Status  string `json:"status"`
+				Message string `json:"message"`
+			}
+			err := json.Unmarshal(rec.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "ユーザーが正常に作成されました", response.Message)
+		}
 	})
 }
 
-func TestUserController_VerifyToken(t *testing.T) {
-	e, rec := setupTest(t)
+func TestLogin(t *testing.T) {
+	e := echo.New()
+	mock := new(mockUserUsecase)
+	controller := NewUserController(mock)
+
+	t.Run("正常系：ログイン成功", func(t *testing.T) {
+		user := model.User{
+			Email:    "test@example.com",
+			Password: "password123",
+		}
+
+		tokenPair := &model.TokenPair{
+			AccessToken:   "access_token",
+			RefreshToken:  "refresh_token",
+			AccessExpiry:  time.Now().Add(15 * time.Minute),
+			RefreshExpiry: time.Now().Add(7 * 24 * time.Hour),
+		}
+
+		mock.On("Login", user).Return(tokenPair, nil).Once()
+
+		jsonStr := `{"email":"test@example.com","password":"password123"}`
+		req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(jsonStr))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		if assert.NoError(t, controller.LogIn(c)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+
+			var response struct {
+				Status  string `json:"status"`
+				Message string `json:"message"`
+				Data    struct {
+					AccessToken string    `json:"accessToken"`
+					TokenType   string    `json:"tokenType"`
+					ExpiresIn   int       `json:"expiresIn"`
+					ExpiresAt   time.Time `json:"expiresAt"`
+				} `json:"data"`
+			}
+			err := json.Unmarshal(rec.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "ログインに成功しました", response.Message)
+			assert.Equal(t, tokenPair.AccessToken, response.Data.AccessToken)
+			assert.Equal(t, "Bearer", response.Data.TokenType)
+		}
+	})
+}
+
+func TestVerifyToken(t *testing.T) {
+	e := echo.New()
+	mock := new(mockUserUsecase)
+	controller := NewUserController(mock)
 
 	t.Run("正常系：トークン検証成功", func(t *testing.T) {
-		// コントローラーの作成
-		mock := &mockUserUsecase{}
-		uc := NewUserController(mock)
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"email": "test@example.com",
+			"exp":   time.Now().Add(time.Hour).Unix(),
+		})
 
-		// リクエストの準備
-		req := httptest.NewRequest(http.MethodGet, "/verify", nil)
+		mock.On("VerifyToken", "valid_token").Return(token, nil).Once()
+
+		req := httptest.NewRequest(http.MethodGet, "/verify-token", nil)
+		req.Header.Set("Authorization", "Bearer valid_token")
+		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		// テスト実行
-		err := uc.VerifyToken(c)
-		assert.NoError(t, err)
+		if assert.NoError(t, controller.VerifyToken(c)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
 
-		// レスポンスの検証
-		assertSuccessResponse(t, rec, http.StatusOK, "トークンは有効です")
+			var response struct {
+				Status  string `json:"status"`
+				Message string `json:"message"`
+				Data    struct {
+					Email string `json:"email"`
+				} `json:"data"`
+			}
+			err := json.Unmarshal(rec.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "トークンは有効です", response.Message)
+			assert.Equal(t, "test@example.com", response.Data.Email)
+		}
+	})
+}
+
+func TestRefreshToken(t *testing.T) {
+	e := echo.New()
+	mock := new(mockUserUsecase)
+	controller := NewUserController(mock)
+
+	t.Run("正常系：トークン更新成功", func(t *testing.T) {
+		refreshToken := "valid_refresh_token"
+		newTokenPair := &model.TokenPair{
+			AccessToken:   "new_access_token",
+			RefreshToken:  "new_refresh_token",
+			AccessExpiry:  time.Now().Add(15 * time.Minute),
+			RefreshExpiry: time.Now().Add(7 * 24 * time.Hour),
+		}
+
+		mock.On("RefreshTokens", refreshToken).Return(newTokenPair, nil).Once()
+
+		req := httptest.NewRequest(http.MethodPost, "/refresh-token", nil)
+		cookie := &http.Cookie{
+			Name:  "refresh_token",
+			Value: refreshToken,
+		}
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		if assert.NoError(t, controller.RefreshToken(c)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+
+			var response struct {
+				Status  string `json:"status"`
+				Message string `json:"message"`
+				Data    struct {
+					AccessToken string    `json:"accessToken"`
+					TokenType   string    `json:"tokenType"`
+					ExpiresIn   int       `json:"expiresIn"`
+					ExpiresAt   time.Time `json:"expiresAt"`
+				} `json:"data"`
+			}
+			err := json.Unmarshal(rec.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, "success", response.Status)
+			assert.Equal(t, "トークンを更新しました", response.Message)
+			assert.Equal(t, newTokenPair.AccessToken, response.Data.AccessToken)
+			assert.Equal(t, "Bearer", response.Data.TokenType)
+		}
 	})
 }

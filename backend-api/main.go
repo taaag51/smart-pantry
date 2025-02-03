@@ -1,24 +1,29 @@
 package main
 
 import (
-	"go-rest-api/controller"
-	"go-rest-api/db"
-	"go-rest-api/repository"
-	"go-rest-api/router"
-	"go-rest-api/services"
-	"go-rest-api/usecase"
-	"go-rest-api/validator"
 	"log"
+	"path/filepath"
+
+	"github.com/joho/godotenv"
+	"github.com/taaag51/smart-pantry/backend-api/controller"
+	"github.com/taaag51/smart-pantry/backend-api/db"
+	"github.com/taaag51/smart-pantry/backend-api/repository"
+	"github.com/taaag51/smart-pantry/backend-api/router"
+	"github.com/taaag51/smart-pantry/backend-api/services"
+	"github.com/taaag51/smart-pantry/backend-api/usecase"
+	"github.com/taaag51/smart-pantry/backend-api/validator"
 )
 
 func main() {
+	// プロジェクトルートの .env ファイルを Overload で読み込み（上書き）
+	if err := godotenv.Overload(filepath.Join("..", ".env")); err != nil {
+		log.Println("Warning: project root .env file not loaded:", err)
+	}
 	db := db.NewDB()
 	userValidator := validator.NewUserValidator()
-	taskValidator := validator.NewTaskValidator()
 
 	// リポジトリの初期化
 	userRepository := repository.NewUserRepository(db)
-	taskRepository := repository.NewTaskRepository(db)
 	foodItemRepository := repository.NewFoodItemRepository(db)
 
 	// サービスの初期化
@@ -29,17 +34,15 @@ func main() {
 
 	// ユースケースの初期化
 	userUsecase := usecase.NewUserUsecase(userRepository, userValidator)
-	taskUsecase := usecase.NewTaskUsecase(taskRepository, taskValidator)
 	foodItemUsecase := usecase.NewFoodItemUsecase(foodItemRepository)
 	recipeUsecase := usecase.NewRecipeUsecase(foodItemRepository, geminiService)
 
 	// コントローラーの初期化
 	userController := controller.NewUserController(userUsecase)
-	taskController := controller.NewTaskController(taskUsecase)
 	foodItemController := controller.NewFoodItemController(foodItemUsecase)
 	recipeController := controller.NewRecipeController(recipeUsecase)
 
 	// ルーターの設定
-	e := router.NewRouter(taskController, userController, foodItemController, recipeController)
+	e := router.NewRouter(userController, foodItemController, recipeController)
 	e.Logger.Fatal(e.Start(":8080"))
 }

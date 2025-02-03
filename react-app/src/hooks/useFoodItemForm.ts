@@ -50,6 +50,29 @@ export const useFoodItemForm = () => {
   }
 
   /**
+   * 日付をRFC3339形式（タイムゾーン付き）に変換
+   * @param date 変換する日付
+   * @returns RFC3339形式の日付文字列
+   */
+  const formatDateToRFC3339 = (date: Date): string => {
+    const pad = (num: number) => String(num).padStart(2, '0')
+
+    const year = date.getFullYear()
+    const month = pad(date.getMonth() + 1)
+    const day = pad(date.getDate())
+    const hours = pad(date.getHours())
+    const minutes = pad(date.getMinutes())
+    const seconds = pad(date.getSeconds())
+
+    const offset = -date.getTimezoneOffset()
+    const offsetHours = pad(Math.abs(Math.floor(offset / 60)))
+    const offsetMinutes = pad(Math.abs(offset % 60))
+    const offsetSign = offset >= 0 ? '+' : '-'
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMinutes}`
+  }
+
+  /**
    * フォーム送信ハンドラー
    * バリデーションを行い、問題なければ食材を作成します
    * @param e 送信イベント
@@ -62,12 +85,18 @@ export const useFoodItemForm = () => {
       return
     }
 
-    // 食材の作成
-    createFoodItemMutation.mutate({
+    // デバッグ情報の出力
+    console.log('Token:', localStorage.getItem('accessToken'))
+
+    const payload = {
       title: title.trim(),
       quantity,
-      expiry_date: expiryDate.toISOString(), // Date型をISO文字列に変換
-    })
+      expiry_date: formatDateToRFC3339(expiryDate),
+    }
+    console.log('Request payload:', payload)
+
+    // 食材の作成
+    createFoodItemMutation.mutate(payload)
 
     // フォームのリセット
     resetForm()

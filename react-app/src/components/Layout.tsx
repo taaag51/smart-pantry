@@ -1,5 +1,5 @@
-import React, { FC, ReactNode } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import React, { FC, ReactNode, useState, useEffect } from 'react'
+import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import {
   Box,
   Drawer,
@@ -14,12 +14,13 @@ import {
   Button,
 } from '@mui/material'
 import {
-  Dashboard as DashboardIcon,
+  // Dashboard as DashboardIcon,
   Kitchen as KitchenIcon,
   Restaurant as RestaurantIcon,
   Inventory as InventoryIcon,
   Logout as LogoutIcon,
 } from '@mui/icons-material'
+import { Auth } from './Auth' // 追加: ログイン画面コンポーネントをインポート
 
 const drawerWidth = 240
 
@@ -30,20 +31,35 @@ interface Props {
 export const Layout: FC<Props> = ({ children }) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const isAuthenticated = true // TODO: 認証状態の管理を実装
+  const [isAuthenticated, setIsAuthenticated] = useState(true) // TODO: 実際の認証ロジックに置き換え
 
   const handleLogout = () => {
-    // TODO: 認証状態のクリアを実装
+    setIsAuthenticated(false)
     navigate('/login')
   }
 
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login')
+    }
+  }, [isAuthenticated, navigate])
+
+  // 変更: 認証状態がfalseの場合は、'/login'ならAuthコンポーネントを返す
+  if (!isAuthenticated) {
+    return location.pathname === '/login' ? (
+      <Auth />
+    ) : (
+      <Navigate to="/login" replace />
+    )
+  }
+
   const menuItems = [
-    {
-      text: 'ダッシュボード',
-      path: '/dashboard',
-      icon: <DashboardIcon />,
-      requiresAuth: true,
-    },
+    // {
+    //   text: 'ダッシュボード',
+    //   path: '/dashboard',
+    //   icon: <DashboardIcon />,
+    //   requiresAuth: true,
+    // },
     {
       text: 'パントリー管理',
       path: '/pantry',

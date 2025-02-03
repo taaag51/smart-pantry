@@ -2,8 +2,20 @@
 // allows you to do things like:
 // expect(element).toHaveTextContent(/react/i)
 // learn more: https://github.com/testing-library/jest-dom
+
+// TextEncoder/TextDecoder polyfill for Node environment
+if (
+  typeof global.TextEncoder === 'undefined' ||
+  typeof global.TextDecoder === 'undefined'
+) {
+  const util = require('util')
+  global.TextEncoder = util.TextEncoder
+  global.TextDecoder = util.TextDecoder
+}
+
 import '@testing-library/jest-dom'
 import React from 'react'
+import { server } from './mocks/server'
 
 // Mock the environment variables
 process.env.REACT_APP_API_URL = 'http://localhost:8080'
@@ -54,7 +66,8 @@ jest.mock('@mui/x-date-pickers', () => {
           props.onChange(e.target.value ? new Date(e.target.value) : null),
       })
     },
-    LocalizationProvider: ({ children }: { children: React.ReactNode }) => children,
+    LocalizationProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
   }
 })
 
@@ -71,13 +84,20 @@ jest.mock('date-fns/locale/ja', () => ({
   },
 }))
 
-// Cleanup MSW after each test
+// MSWのセットアップ
+beforeAll(() => {
+  // MSWサーバーを起動
+  server.listen()
+})
+
 afterEach(() => {
-  if (typeof window !== 'undefined') {
-    // MSWのクリーンアップ
-    const { worker } = require('./mocks/browser')
-    worker?.resetHandlers()
-  }
+  // 各テスト後にハンドラーをリセット
+  server.resetHandlers()
+})
+
+afterAll(() => {
+  // テスト終了後にサーバーをクリーンアップ
+  server.close()
 })
 
 // エラー処理のグローバル設定

@@ -26,6 +26,7 @@ export const Auth = () => {
   const { errorMessage, setErrorMessage } = useError()
 
   const submitAuthHandler = async (e: FormEvent<HTMLFormElement>) => {
+    console.log('ログインリクエストを送信:', { email, pw }) // 追加
     e.preventDefault()
     if (!email || !pw) {
       setErrorMessage('メールアドレスとパスワードを入力してください')
@@ -39,20 +40,20 @@ export const Auth = () => {
           password: pw,
         })
       } else {
-        await registerMutation
-          .mutateAsync({
-            email: email,
-            password: pw,
-          })
-          .then(() =>
-            loginMutation.mutate({
-              email: email,
-              password: pw,
-            })
-          )
+        // 新規登録後、成功したらログインを実行
+        await registerMutation.mutateAsync({
+          email: email,
+          password: pw,
+        })
+        // 登録成功後、明示的にログインを実行
+        await loginMutation.mutateAsync({
+          email: email,
+          password: pw,
+        })
       }
     } catch (error) {
       console.error('Auth error:', error)
+      // エラーはmutationのonErrorで処理されるため、ここでは何もしない
     }
   }
 

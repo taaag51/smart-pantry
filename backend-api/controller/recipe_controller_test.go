@@ -3,10 +3,11 @@ package controller
 import (
 	"encoding/json"
 	"errors"
-	"go-rest-api/mock"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/taaag51/smart-pantry/backend-api/mock"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/golang/mock/gomock"

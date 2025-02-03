@@ -41,7 +41,26 @@ export const RecipeSuggestions: FC = () => {
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
+      {/* ページタイトル */}
+      <Typography
+        variant="h5"
+        sx={{
+          mb: 4,
+          fontWeight: 600,
+          color: '#1a1a1a',
+          position: 'relative',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: -8,
+            left: 0,
+            width: 40,
+            height: 3,
+            background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+            borderRadius: '2px',
+          },
+        }}
+      >
         レシピ提案
       </Typography>
 
