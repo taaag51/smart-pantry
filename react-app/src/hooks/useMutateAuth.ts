@@ -24,6 +24,8 @@ interface LoginResponse {
 export const useMutateAuth = () => {
   const navigate = useNavigate()
   const resetEditedTask = useStore((state) => state.resetEditedTask)
+  const setAuth = useStore((state) => state.setAuth)
+  const clearAuth = useStore((state) => state.clearAuth)
   const { switchErrorHandling } = useError()
 
   const loginMutation = useMutation<
@@ -33,9 +35,7 @@ export const useMutateAuth = () => {
   >({
     mutationFn: async (user: Credential) => {
       try {
-        // CSRFトークンを取得
         await getCsrfToken()
-        // ログインリクエスト
         return await axiosInstance.post<LoginResponse>('/login', user)
       } catch (err) {
         if (err instanceof Error) {
@@ -48,13 +48,19 @@ export const useMutateAuth = () => {
         throw err
       }
     },
-    onSuccess: async (res) => {
+    onSuccess: (res) => {
+      console.log('ログインレスポンス:', res.data)
       const { accessToken } = res.data.data
       if (accessToken) {
-        // 認証状態を更新
+        console.log('アクセストークンを設定:', accessToken)
+        localStorage.setItem('accessToken', accessToken)
+        // Axiosのデフォルトヘッダーにトークンを設定
+        axiosInstance.defaults.headers.common[
+          'Authorization'
+        ] = `Bearer ${accessToken}`
+        setAuth(accessToken)
+        // ログイン成功イベントを発火
         window.dispatchEvent(new CustomEvent('login-success'))
-        // イベントの反映を待つ
-        await new Promise((resolve) => setTimeout(resolve, 100))
         navigate('/pantry', { replace: true })
       } else {
         console.error('No token in login response')
@@ -82,9 +88,7 @@ export const useMutateAuth = () => {
   >({
     mutationFn: async (user: Credential) => {
       try {
-        // CSRFトークンを取得
         await getCsrfToken()
-        // アカウント登録リクエスト
         return await axiosInstance.post('/signup', user)
       } catch (err) {
         if (err instanceof Error) {
@@ -96,6 +100,10 @@ export const useMutateAuth = () => {
         }
         throw err
       }
+    },
+    onSuccess: () => {
+      // 登録成功のみを処理し、ログインは別途行う
+      console.log('Registration successful')
     },
     onError: (err: AxiosError<ApiError>) => {
       if (err.message.includes('CSRF')) {
@@ -116,9 +124,7 @@ export const useMutateAuth = () => {
     {
       mutationFn: async () => {
         try {
-          // CSRFトークンを取得
           await getCsrfToken()
-          // ログアウトリクエスト
           return await axiosInstance.post('/logout')
         } catch (err) {
           if (err instanceof Error) {
@@ -131,20 +137,16 @@ export const useMutateAuth = () => {
           throw err
         }
       },
-      onSuccess: async () => {
+      onSuccess: () => {
         resetEditedTask()
-        window.dispatchEvent(new CustomEvent('logout-success'))
-        // 状態の更新が反映されるのを待ってからナビゲーション
-        await new Promise((resolve) => setTimeout(resolve, 0))
+        clearAuth()
         navigate('/', { replace: true })
       },
-      onError: async (err: AxiosError<ApiError>) => {
+      onError: (err: AxiosError<ApiError>) => {
         console.error('Logout error:', err)
         // エラーが発生しても、ローカルのクリーンアップは実行
         resetEditedTask()
-        window.dispatchEvent(new CustomEvent('logout-success'))
-        // 状態の更新が反映されるのを待ってからナビゲーション
-        await new Promise((resolve) => setTimeout(resolve, 0))
+        clearAuth()
         navigate('/', { replace: true })
       },
     }

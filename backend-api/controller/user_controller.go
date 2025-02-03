@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"log" // 追加
 	"net/http"
 	"time"
 
@@ -57,6 +58,7 @@ func (uc *userController) SignUp(c echo.Context) error {
 }
 
 func (uc *userController) LogIn(c echo.Context) error {
+	log.Printf("ログインリクエスト - Method: %s, Headers: %v", c.Request().Method, c.Request().Header)
 	user, err := bindUser(c)
 	if err != nil {
 		return response.HandleError(c, http.StatusBadRequest, "リクエストの形式が不正です")
@@ -64,8 +66,10 @@ func (uc *userController) LogIn(c echo.Context) error {
 
 	tokenPair, err := uc.uu.Login(user)
 	if err != nil {
+		log.Printf("ログインエラー: %v", err)
 		return response.HandleError(c, http.StatusUnauthorized, "メールアドレスまたはパスワードが正しくありません")
 	}
+	log.Printf("ログイン成功: %s", user.Email)
 
 	// アクセストークンをCookieに設定
 	response.SetCookie(c, response.NewAuthCookie(
@@ -118,15 +122,20 @@ func (uc *userController) CsrfToken(c echo.Context) error {
 }
 
 func (uc *userController) VerifyToken(c echo.Context) error {
+	log.Printf("トークン検証リクエスト - Headers: %v", c.Request().Header)
+
 	tokenString := c.Request().Header.Get("Authorization")
 	if tokenString == "" {
+		log.Printf("Authorizationヘッダーが見つかりません")
 		return response.HandleError(c, http.StatusUnauthorized, "未認証")
 	}
 
 	if len(tokenString) < 7 || tokenString[:7] != "Bearer " {
+		log.Printf("不正なトークン形式: %s", tokenString)
 		return response.HandleError(c, http.StatusUnauthorized, "未認証")
 	}
 	tokenString = tokenString[7:]
+	log.Printf("検証するトークン: %s", tokenString)
 
 	// トークンの検証のみを行い、新しいトークンは発行しない
 	token, err := uc.uu.VerifyToken(tokenString)

@@ -1,6 +1,7 @@
 package router
 
 import (
+	"log"
 	"net/http"
 	"os"
 
@@ -49,8 +50,11 @@ func NewRouter(uc controller.IUserController, fc controller.IFoodItemController,
 	e.GET("/csrf", uc.CsrfToken)
 	e.POST("/refresh-token", uc.RefreshToken) // 新しいリフレッシュトークンエンドポイント
 
+	// トークン検証エンドポイント（認証ミドルウェアなし）
+	e.GET("/verify-token", uc.VerifyToken)
+
 	// JWT認証が必要なルート
-	api := e.Group("")
+	api := e.Group("/api")
 	api.Use(echojwt.WithConfig(echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(jwt.MapClaims)
@@ -60,15 +64,15 @@ func NewRouter(uc controller.IUserController, fc controller.IFoodItemController,
 		ContextKey:    "user",
 		SigningMethod: "HS256",
 		ErrorHandler: func(c echo.Context, err error) error {
+			// JWTミドルウェアのエラーをログ出力
+			log.Printf("JWT認証エラー: %v", err)
+			log.Printf("リクエストヘッダー: %v", c.Request().Header)
 			return c.JSON(http.StatusUnauthorized, map[string]string{
 				"status":  "error",
 				"message": "未認証",
 			})
 		},
 	}))
-
-	// 認証確認エンドポイント（認証必須）
-	api.GET("/verify-token", uc.VerifyToken)
 
 	// 食材関連
 	foodItems := api.Group("/food-items")

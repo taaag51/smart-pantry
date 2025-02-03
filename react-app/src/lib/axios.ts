@@ -9,6 +9,12 @@ const axiosInstance = axios.create({
   },
 })
 
+// 初期化時にlocalStorageからトークンを復元
+const token = localStorage.getItem('accessToken')
+if (token) {
+  axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`
+}
+
 // リクエストインターセプターを追加
 axiosInstance.interceptors.request.use(
   (config) => {
@@ -18,8 +24,11 @@ axiosInstance.interceptors.request.use(
       config.headers['X-CSRF-Token'] = csrfToken
     }
 
-    // CSRFエンドポイントでない場合は、Cookieに含まれるトークンを使用
-    // Cookieは withCredentials: true で自動的に送信される
+    // アクセストークンがある場合は、Authorizationヘッダーに設定
+    const token = localStorage.getItem('accessToken')
+    if (token && config.url !== '/csrf') {
+      config.headers['Authorization'] = `Bearer ${token}`
+    }
 
     return config
   },
@@ -106,6 +115,7 @@ axiosInstance.interceptors.response.use(
 )
 
 export const getCsrfToken = async () => {
+  console.log('CSRFトークンを取得しています...')
   try {
     const response = await axiosInstance.get('/csrf')
     const token = response.headers['x-csrf-token']
